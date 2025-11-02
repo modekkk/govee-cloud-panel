@@ -3,531 +3,543 @@
 <html lang="pl">
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Govee – Panel (Cloud API) v4.9</title>
+<title>SmartHome Studio v5.1</title>
+<!-- Three.js for 3D mode -->
+<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
 <style>
-  :root{ --accent:#2563eb; --bg:#fafafa; --muted:#666; }
-  body{font-family:system-ui,Segoe UI,Roboto,Arial;margin:20px;max-width:1280px;background:#fff}
-  h1{margin:8px 0 16px}
-  .row{display:flex;gap:12px;align-items:center;margin:10px 0;flex-wrap:wrap}
-  fieldset{border:1px solid #e5e5e5;padding:14px;border-radius:12px;margin-bottom:16px;background:#fff}
-  legend{padding:0 6px;color:#555}
-  button{padding:8px 12px;border-radius:10px;border:1px solid #ccc;cursor:pointer;background:#fff}
-  button.primary{background:var(--accent);color:white;border-color:var(--accent)}
-  .muted{color:var(--muted)}
-  .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
-  @media (max-width: 1024px){ .grid3{grid-template-columns:1fr} .grid{grid-template-columns:1fr} }
-  pre{background:#f6f6f6;border:1px solid #e5e5e5;padding:10px;border-radius:8px;max-height:260px;overflow:auto}
-  input[type=text],input[type=number]{width:100%;padding:6px;border:1px solid #ddd;border-radius:8px}
-  input[type=range]{width:260px}
-  .card{border:1px solid #eee;border-radius:12px;padding:12px;background:#fff}
-  .small{font-size:12px}
-  .tools{display:flex;gap:10px;flex-wrap:wrap}
-  .canvasWrap{position:relative}
-  svg.map{width:100%;height:520px;border:1px dashed #ccc;border-radius:12px;background:var(--bg)}
-  .dot{cursor:grab}
-  .dot:active{cursor:grabbing}
-  .mini{position:absolute;display:none;min-width:220px;background:#fff;border:1px solid #ddd;border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.1);padding:10px;z-index:10}
-  .mini .row{margin:6px 0}
-  .bgPreview{max-width:320px;max-height:180px;border:1px solid #ddd;border-radius:8px}
-  .pill{padding:2px 8px;border-radius:999px;border:1px solid #ddd;font-size:12px}
+  :root{
+    --bg:#0b1220; --glass:rgba(255,255,255,.10); --glass2:rgba(255,255,255,.08); --brd:rgba(255,255,255,.22);
+    --txt:#e5e7eb; --muted:#9aa6b2; --accent:#60a5fa; --accent2:#22d3ee;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{
+    font-family:Inter,system-ui,Segoe UI,Roboto,Arial;color:var(--txt);
+    background:
+      radial-gradient(1200px 900px at 15% 10%, rgba(34,211,238,.22) 0, transparent 60%),
+      radial-gradient(1200px 900px at 85% 20%, rgba(99,102,241,.22) 0, transparent 60%),
+      linear-gradient(180deg, var(--bg), var(--bg));
+    overflow:hidden;
+  }
+  header{height:64px;display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--brd);backdrop-filter:blur(14px);background:linear-gradient(120deg,var(--glass),transparent)}
+  .logo{width:34px;height:34px;border-radius:12px;background:conic-gradient(from 0deg, var(--accent2), var(--accent) 40%, var(--accent2) 80%);box-shadow:0 0 22px rgba(96,165,250,.45)}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .pill{padding:4px 10px;border-radius:999px;border:1px solid var(--brd);background:var(--glass2);font-size:12px;color:var(--muted)}
+  .btn{padding:10px 14px;border-radius:12px;border:1px solid var(--brd);background:var(--glass2);color:var(--txt);cursor:pointer}
+  .btn.primary{background:linear-gradient(135deg,var(--accent2),var(--accent)); color:#0b1220; border-color:transparent; font-weight:700}
+  .btn.ghost{background:transparent}
+  .layout{display:grid;grid-template-columns:320px 1fr;grid-template-rows:1fr; height:calc(100% - 64px)}
+  aside{border-right:1px solid var(--brd);background:linear-gradient(180deg,var(--glass),transparent);backdrop-filter:blur(16px);padding:14px;overflow:auto}
+  main{position:relative;overflow:auto;padding:14px}
+  .section{margin:0 0 14px;border:1px solid var(--brd);border-radius:18px;background:var(--glass2);padding:12px}
+  .section h3{margin:0 0 8px;font-size:14px;color:#c7d2fe}
+  input,select{width:100%;padding:10px;border-radius:12px;border:1px solid var(--brd);background:rgba(20,24,38,.6);color:#fff}
+  input[type=range]{width:100%}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+  .tabbar{display:flex;gap:8px;margin-bottom:8px}
+  .tab{padding:8px 12px;border-radius:10px;border:1px solid var(--brd);cursor:pointer}
+  .tab.active{background:linear-gradient(180deg,rgba(255,255,255,.18),rgba(255,255,255,.08));border-color:rgba(255,255,255,.35)}
+  .mapWrap{height:calc(100vh - 180px)}
+  svg.map{width:100%;height:100%;border:1px dashed var(--brd);border-radius:16px;background:rgba(255,255,255,.03)}
+  .dot{cursor:grab; filter: drop-shadow(0 0 12px rgba(255,255,255,.35)); transition: transform .15s ease}
+  .dot:active{transform:scale(1.04)}
+  .mini{position:absolute;display:none;min-width:260px;background:rgba(10,12,24,.92);border:1px solid var(--brd);border-radius:14px;box-shadow:0 16px 40px rgba(0,0,0,.45);padding:12px;z-index:20}
+  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+  pre{background:rgba(0,0,0,.35);border:1px solid var(--brd);padding:10px;border-radius:14px;max-height:260px;overflow:auto;color:#d1d5db}
+  /* Mobile */
+  @media (max-width: 1100px){
+    .layout{grid-template-columns:1fr}
+    aside{order:2; height:46%}
+    main{order:1; height:54%}
+    .mapWrap{height:calc(54vh - 120px)}
+  }
 </style>
 <body>
-  <div class="row" style="justify-content:space-between">
-    <h1>Govee – Panel (Cloud API) <small>v4.9</small></h1>
-    <form id="logoutF"><button>Wyloguj</button></form>
+<header>
+  <div class="row">
+    <div class="logo"></div>
+    <div>
+      <div style="font-weight:800;letter-spacing:.3px">SmartHome Studio</div>
+      <div class="pill">Govee Cloud • v5.1</div>
+    </div>
   </div>
-  <p class="muted">Hasłowane logowanie (<b>admin / werusia321</b> – możesz zmienić ENV), auto-refresh stanu i kolory kropek, edycja pokoi/ścian, grupy, pełny eksport/import projektu.</p>
+  <div class="row">
+    <div class="tabbar">
+      <div class="tab active" data-tab="map">Mapa</div>
+      <div class="tab" data-tab="dashboard">Dashboard</div>
+      <div class="tab" data-tab="three">3D</div>
+      <div class="tab" data-tab="schedules">Harmonogramy</div>
+    </div>
+    <span id="stateBadge" class="pill">auto-refresh: off</span>
+    <button id="toggleAuto" class="btn">Auto</button>
+    <form id="logoutF"><button class="btn ghost">Wyloguj</button></form>
+  </div>
+</header>
 
-  <fieldset class="card">
-    <legend>Menadżer urządzeń</legend>
-    <div class="grid3">
-      <div><label>Nazwa</label><input id="label" placeholder="np. Żarówka - telewizor"/></div>
-      <div><label>Device</label><input id="device" placeholder="np. 6F:F6:..."/></div>
-      <div><label>SKU</label><input id="sku" placeholder="np. H6004"/></div>
-    </div>
-    <div class="tools">
-      <button id="save" class="primary">Zapisz/aktualizuj</button>
-      <button id="saveQuick">Zapisz jako „Żarówka - telewizor”</button>
-      <button id="delete">Usuń</button>
-      <button id="exportDevices">Eksport urządzeń</button>
-      <input type="file" id="importDevices" accept="application/json"/>
-    </div>
-    <div class="row">
-      <label>Lista</label>
-      <select id="savedList"><option value="">— wybierz zapisane urządzenie —</option></select>
-      <button id="select">Użyj</button>
-      <span id="stateBadge" class="pill muted">auto-refresh: off</span>
-      <button id="toggleAuto">Auto-refresh ON/OFF</button>
-    </div>
-    <details>
-      <summary>Pozycja / meta</summary>
+<div class="layout">
+  <aside>
+    <div class="section">
+      <h3>Urządzenie</h3>
       <div class="grid3">
-        <div><label>Pokój</label><input id="room" placeholder="np. salon"/></div>
-        <div><label>Pozycja X,Y (0..1)</label><input id="posxy" placeholder="np. 0.50,0.25"/></div>
-        <div><label>Z (wysokość)</label><input id="posz" placeholder="np. 2.4"/></div>
+        <div><label>Nazwa</label><input id="label" placeholder="np. Żarówka - telewizor"></div>
+        <div><label>Device</label><input id="device" placeholder="6F:F6:..."></div>
+        <div><label>SKU</label><input id="sku" placeholder="H6004"></div>
       </div>
-    </details>
-  </fieldset>
-
-  <fieldset class="card">
-    <legend>Grupy</legend>
-    <div class="tools">
-      <input id="groupName" placeholder="np. Salon"/>
-      <button id="groupAdd">Dodaj grupę</button>
-      <select id="groupList"><option value="">— wybierz grupę —</option></select>
-      <button id="groupDel">Usuń grupę</button>
-    </div>
-    <div class="tools">
-      <button id="groupAttach">Dodaj WYBRANE urządzenie do grupy</button>
-      <button id="groupOn">Grupa: ON</button>
-      <button id="groupOff">Grupa: OFF</button>
-      <input type="range" id="groupBri" min="1" max="100" value="50"/><span id="groupBVal">50%</span>
-      <button id="groupSetBri">Ustaw jasność</button>
-      <input type="color" id="groupColor" value="#ffffff"/><button id="groupSetColor">Ustaw kolor</button>
-    </div>
-  </fieldset>
-
-  <fieldset class="card">
-    <legend>Plan mieszkania</legend>
-    <div class="tools">
-      <input type="file" id="bgFile" accept="image/*"/>
-      <button id="clearBg">Usuń tło</button>
-      <img id="bgPreview" class="bgPreview" alt="Podgląd tła"/>
-      <button id="exportProject">Eksport projektu</button>
-      <input type="file" id="importProject" accept="application/json"/>
-    </div>
-    <div class="tools">
-      <button id="addRoom">Dodaj pokój</button>
-      <button id="addWall">Dodaj ścianę</button>
-      <label><input type="checkbox" id="snap"/> Snap do siatki</label>
-      <button id="clearPlan">Wyczyść plan</button>
-    </div>
-    <div class="canvasWrap">
-      <svg class="map" id="map" viewBox="0 0 1000 600" preserveAspectRatio="xMidYMid meet">
-        <defs>
-          <pattern id="bgPattern" patternUnits="userSpaceOnUse" width="1000" height="600">
-            <image id="bgImage" href="" x="0" y="0" width="1000" height="600" preserveAspectRatio="xMidYMid slice" />
-          </pattern>
-        </defs>
-        <rect id="bgRect" x="0" y="0" width="1000" height="600" fill="url(#bgPattern)"></rect>
-        <g id="rooms"></g>
-        <g id="walls" stroke="#333" stroke-width="4" stroke-linecap="round"></g>
-        <g id="dots"></g>
-      </svg>
-      <div id="mini" class="mini">
-        <div class="row"><b id="miniLabel">—</b></div>
-        <div class="row"><input type="range" id="miniBri" min="1" max="100"/><span id="miniBriVal" class="muted small"></span></div>
-        <div class="row"><input type="color" id="miniColor"/><button id="miniSetColor">Kolor</button></div>
-        <div class="row">
-          <input type="number" id="miniK" value="3000" min="2700" max="6500" step="50" style="width:110px"/><button id="miniSetK">CCT</button>
+      <div class="row" style="margin-top:8px"><button id="save" class="btn primary">Zapisz</button><button id="saveQuick" class="btn">Szybko „Żarówka - telewizor”</button><button id="delete" class="btn">Usuń</button></div>
+      <div class="row" style="margin-top:8px"><select id="savedList" style="flex:1"><option>—</option></select><button id="select" class="btn">Użyj</button></div>
+      <details style="margin-top:6px">
+        <summary>Meta i pozycja</summary>
+        <div class="grid3" style="margin-top:8px">
+          <div><label>Pokój</label><input id="room"></div>
+          <div><label>X,Y (0..1)</label><input id="posxy" placeholder="0.5,0.25"></div>
+          <div><label>Z (m)</label><input id="posz" placeholder="2.4"></div>
         </div>
-        <div class="row"><button id="miniOn">On</button><button id="miniOff">Off</button></div>
-        <div class="row"><button id="miniClose">Zamknij</button></div>
+      </details>
+    </div>
+
+    <div class="section">
+      <h3>Grupy</h3>
+      <div class="row"><input id="groupName" placeholder="Salon"><button id="groupAdd" class="btn">Dodaj</button></div>
+      <div class="row" style="margin-top:6px"><select id="groupList" style="flex:1"><option>—</option></select><button id="groupDel" class="btn">Usuń</button></div>
+      <div class="row" style="margin-top:8px"><button id="groupAttach" class="btn">Dodaj WYBRANE do grupy</button></div>
+      <div class="row" style="margin-top:8px"><button id="groupOn" class="btn">ON</button><button id="groupOff" class="btn">OFF</button></div>
+      <div class="row" style="margin-top:8px"><input type="range" id="groupBri" min="1" max="100" value="50"><span id="groupBVal" class="pill">50%</span><button id="groupSetBri" class="btn">Jasność</button></div>
+      <div class="row" style="margin-top:8px"><input type="color" id="groupColor" value="#ffffff"><button id="groupSetColor" class="btn">Kolor</button></div>
+    </div>
+
+    <div class="section">
+      <h3>Projekt</h3>
+      <div class="row"><input type="file" id="bgFile" accept="image/*"><button id="clearBg" class="btn">Usuń tło</button></div>
+      <div class="row" style="margin-top:8px"><button id="addRoom" class="btn">Dodaj pokój</button><button id="addWall" class="btn">Dodaj ścianę</button><label class="pill"><input type="checkbox" id="snap"> Snap</label><button id="clearPlan" class="btn">Wyczyść</button></div>
+      <details style="margin-top:6px">
+        <summary>Skala (metry)</summary>
+        <div class="row" style="margin-top:6px">
+          <button id="setA" class="btn">Ustaw punkt A</button>
+          <button id="setB" class="btn">Ustaw punkt B</button>
+        </div>
+        <div class="row" style="margin-top:6px">
+          <input id="distM" placeholder="Dystans A–B w metrach (np. 3.2)">
+          <button id="saveScale" class="btn">Zapisz skalę</button>
+        </div>
+        <div class="row"><span class="pill" id="scaleInfo">Brak skali</span></div>
+      </details>
+    </div>
+
+    <div class="section">
+      <h3>Sterowanie (panel)</h3>
+      <div class="row"><button id="on" class="btn">Włącz</button><button id="off" class="btn">Wyłącz</button></div>
+      <div class="row" style="margin-top:8px"><input type="range" id="brightness" min="1" max="100" value="50"><span id="bval" class="pill">50%</span><button id="setBrightness" class="btn">Jasność</button></div>
+      <div class="row" style="margin-top:8px"><input type="color" id="color" value="#ffffff"><button id="setColor" class="btn">Kolor</button></div>
+      <div class="row" style="margin-top:8px"><input type="number" id="kelvin" value="3000" min="2700" max="6500" step="50" style="width:120px"><button id="setKelvin" class="btn">CCT</button></div>
+      <div class="row" style="margin-top:8px"><button id="refresh" class="btn">Odśwież stan</button></div>
+    </div>
+
+    <div class="section">
+      <h3>Eksport / Import</h3>
+      <div class="row"><button id="exportDevices" class="btn">Eksport urządzeń</button><input type="file" id="importDevices" accept="application/json"></div>
+      <div class="row" style="margin-top:8px"><button id="exportProject" class="btn">Eksport projektu</button><input type="file" id="importProject" accept="application/json"></div>
+    </div>
+  </aside>
+
+  <main>
+    <div id="view-map" class="section">
+      <h3>Mapa (klikaj, przeciągaj – kropki płynnie zmieniają kolor)</h3>
+      <div class="mapWrap">
+        <svg class="map" id="map" viewBox="0 0 1000 600" preserveAspectRatio="xMidYMid meet">
+          <defs>
+            <pattern id="bgPattern" patternUnits="userSpaceOnUse" width="1000" height="600">
+              <image id="bgImage" href="" x="0" y="0" width="1000" height="600" preserveAspectRatio="xMidYMid slice" />
+            </pattern>
+          </defs>
+          <rect id="bgRect" x="0" y="0" width="1000" height="600" fill="url(#bgPattern)"></rect>
+          <g id="rooms"></g>
+          <g id="walls" stroke="#5b617a" stroke-width="4" stroke-linecap="round"></g>
+          <g id="dots"></g>
+        </svg>
+        <div id="mini" class="mini">
+          <div class="row"><b id="miniLabel">—</b><span class="pill" id="miniXY">x=—, y=— (m)</span></div>
+          <div class="row"><input type="range" id="miniBri" min="1" max="100"><span id="miniBriVal" class="pill">50%</span></div>
+          <div class="row"><input type="color" id="miniColor"><button id="miniSetColor" class="btn">Kolor</button></div>
+          <div class="row"><input type="number" id="miniK" value="3000" min="2700" max="6500" step="50" style="width:110px"><button id="miniSetK" class="btn">CCT</button></div>
+          <div class="row"><button id="miniOn" class="btn">On</button><button id="miniOff" class="btn">Off</button><button id="miniClose" class="btn ghost">Zamknij</button></div>
+        </div>
       </div>
     </div>
-  </fieldset>
 
-  <fieldset>
-    <legend>Log</legend>
-    <pre id="raw"></pre>
-  </fieldset>
+    <div id="view-dashboard" class="section" style="display:none">
+      <h3>Dashboard</h3>
+      <div id="cards" class="cards"></div>
+    </div>
+
+    <div id="view-three" class="section" style="display:none">
+      <h3>Tryb 3D (eksperymentalny)</h3>
+      <div id="threeMount" style="height:60vh;border:1px dashed var(--brd);border-radius:16px;background:rgba(255,255,255,.03)"></div>
+    </div>
+
+    <div id="view-schedules" class="section" style="display:none">
+      <h3>Harmonogramy (lokalne – działają, gdy panel jest otwarty)</h3>
+      <div class="row">
+        <input type="time" id="schTime">
+        <select id="schTarget"><option value="all">Wszystkie</option></select>
+        <select id="schAction">
+          <option value="on">Włącz</option>
+          <option value="off">Wyłącz</option>
+          <option value="bri">Jasność</option>
+          <option value="color">Kolor</option>
+          <option value="kelvin">CCT</option>
+        </select>
+        <input id="schValue" placeholder="np. 60 / #ff8800 / 3000">
+        <select id="schDays" multiple title="dni">(Pon, Wt, Śr, Cz, Pt, So, Nd)</select>
+        <button id="schAdd" class="btn">Dodaj</button>
+      </div>
+      <div class="row" style="margin-top:8px"><div class="pill">Uwaga: lokalny scheduler – gdy chcesz 24/7, postaw backend cron.</div></div>
+      <div class="section" style="margin-top:8px"><div id="schList" class="cards"></div></div>
+    </div>
+
+    <div class="section"><h3>Log</h3><pre id="raw"></pre></div>
+  </main>
+</div>
 
 <script>
-// ===== logout =====
-document.getElementById("logoutF").onsubmit = async (e)=>{
-  e.preventDefault();
-  await fetch("/api/logout",{method:"POST"});
-  location.href = "/login.html";
-};
+// ===== helpers & storage =====
+const DEVKEY="govee.devices", PLANKEY="govee.plan", GROUPKEY="govee.groups", SCHKEY="govee.schedules";
+const qs = (s)=>document.querySelector(s), qsa=(s)=>Array.from(document.querySelectorAll(s));
+const api=(p,opt)=>fetch(p,opt).then(r=>r.json());
+const uuid=()=>Math.random().toString(36).slice(2)+Date.now().toString(36);
+const clamp01=v=>Math.max(0,Math.min(1,v));
+function load(k,def){ try{ return JSON.parse(localStorage.getItem(k)||JSON.stringify(def)); }catch{ return def; } }
+function save(k,v){ localStorage.setItem(k, JSON.stringify(v)); }
+function loadDevices(){ return load(DEVKEY, []); }
+function saveDevices(v){ save(DEVKEY,v); }
+function loadPlan(){ return load(PLANKEY, {rooms:[], walls:[], scale:null}); }
+function savePlan(v){ save(PLANKEY, v); }
+function loadGroups(){ return load(GROUPKEY, []); }
+function saveGroups(v){ save(GROUPKEY, v); }
+function loadSchedules(){ return load(SCHKEY, []); }
+function saveSchedules(v){ save(SCHKEY, v); }
 
-// ===== storage =====
-const DEVKEY = "govee.devices";           // [{id,label,device,sku,meta:{room,x,y,z}, state:{...}}]
-const PLANKEY = "govee.plan";             // {bg, rooms:[{id,x,y,w,h,label,color}], walls:[{id,x1,y1,x2,y2}]}
-const GROUPKEY = "govee.groups";          // [{id,name,deviceIds:[]}]
-
-const api = (p, opt)=>fetch(p, opt).then(r=>r.json());
-const qs = (s)=>document.querySelector(s);
-const show = (el, obj)=> el.textContent = JSON.stringify(obj, null, 2);
-const uuid = ()=>Math.random().toString(36).slice(2)+Date.now().toString(36);
-const clamp01 = v=>Math.max(0,Math.min(1,v));
-
-function loadDevices(){ try { return JSON.parse(localStorage.getItem(DEVKEY) || "[]"); } catch { return []; } }
-function saveDevices(list){ localStorage.setItem(DEVKEY, JSON.stringify(list)); }
-function loadPlan(){ try { return JSON.parse(localStorage.getItem(PLANKEY) || '{"rooms":[],"walls":[]}' ); } catch{ return {rooms:[],walls:[]} } }
-function savePlan(plan){ localStorage.setItem(PLANKEY, JSON.stringify(plan)); }
-function loadGroups(){ try { return JSON.parse(localStorage.getItem(GROUPKEY) || "[]"); } catch{ return []; } }
-function saveGroups(gs){ localStorage.setItem(GROUPKEY, JSON.stringify(gs)); }
-
-// ===== UI: devices =====
-function formToObj(){
-  const norm = v => { const n = parseFloat(v); return Number.isFinite(n) ? n : undefined; };
-  const [x,y] = (qs("#posxy").value||"").split(",").map(s=>norm(s.trim()));
-  return {
-    label: qs("#label").value.trim(),
-    device: qs("#device").value.trim(),
-    sku: qs("#sku").value.trim(),
-    meta: { room: qs("#room").value.trim() || undefined, x, y, z: norm(qs("#posz").value) }
-  };
-}
-function objToForm(o){
-  qs("#label").value = o.label || "";
-  qs("#device").value = o.device || "";
-  qs("#sku").value = o.sku || "";
-  qs("#room").value = o.meta?.room || "";
-  const xy = [o.meta?.x, o.meta?.y].every(n=>typeof n === "number") ? `${o.meta.x},${o.meta.y}` : "";
-  qs("#posxy").value = xy;
-  qs("#posz").value = typeof o.meta?.z === "number" ? o.meta.z : "";
-}
-function refreshSavedList(selectedId){
-  const list = loadDevices();
-  const sel = qs("#savedList");
-  sel.innerHTML = '<option value="">— wybierz zapisane urządzenie —</option>';
-  list.forEach(it=>{
-    const opt = document.createElement("option");
-    opt.value = it.id;
-    let label = it.label || it.sku || "Urządzenie";
-    if(it.meta?.room) label = `[${it.meta.room}] ` + label;
-    opt.textContent = `${label} (${it.device} | ${it.sku})`;
-    sel.appendChild(opt);
-  });
-  if (selectedId) sel.value = selectedId;
-  renderPlan();
-  return list;
-}
-function upsertCurrent(asLabel){
-  const form = formToObj();
-  if (asLabel) form.label = asLabel;
-  if (!form.device || !form.sku) { alert("Podaj device i sku"); return; }
-  const list = loadDevices();
-  const idx = list.findIndex(it=>it.device===form.device && it.sku===form.sku);
-  if (idx>=0){ list[idx] = { ...list[idx], ...form }; }
-  else { list.push({ id: uuid(), ...form }); }
-  saveDevices(list);
-  refreshSavedList();
-  alert("Zapisano.");
-}
-qs("#save").onclick = ()=> upsertCurrent();
-qs("#saveQuick").onclick = ()=> upsertCurrent("Żarówka - telewizor");
-qs("#delete").onclick = ()=>{
-  const list = loadDevices();
-  const selId = qs("#savedList").value;
-  if (!selId) { alert("Wybierz pozycję z listy"); return; }
-  const idx = list.findIndex(it=>it.id===selId);
-  if (idx>=0){ list.splice(idx,1); saveDevices(list); refreshSavedList(); alert("Usunięto."); }
-};
-qs("#savedList").onchange = (e)=>{
-  const list = loadDevices();
-  const it = list.find(x=>x.id===e.target.value);
-  if (it) objToForm(it);
-};
-qs("#select").onclick = ()=>{
-  const selId = qs("#savedList").value;
-  const list = loadDevices();
-  const it = list.find(x=>x.id===selId);
-  if (!it){ alert("Wybierz pozycję z listy"); return; }
-  objToForm(it);
-  alert("Załadowano wybraną żarówkę do formularza.");
-};
-// Export/import devices
-qs("#exportDevices").onclick = ()=>{
-  const data = JSON.stringify(loadDevices(), null, 2);
-  const blob = new Blob([data], {type:"application/json"});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a"); a.href = url; a.download = "govee-devices.json"; a.click();
-  URL.revokeObjectURL(url);
-};
-qs("#importDevices").onchange = (e)=>{
-  const file = e.target.files?.[0]; if (!file) return;
-  const reader = new FileReader();
-  reader.onload = ()=>{ try{ const arr = JSON.parse(String(reader.result||"[]")); if (!Array.isArray(arr)) throw new Error("Błędny format"); saveDevices(arr); refreshSavedList(); alert("Zaimportowano."); }catch(err){ alert("Błąd importu: "+err.message); } };
-  reader.readAsText(file);
-};
-
-// ===== Groups =====
-function refreshGroups(selectedId){
-  const gs = loadGroups();
-  const sel = qs("#groupList");
-  sel.innerHTML = '<option value="">— wybierz grupę —</option>';
-  gs.forEach(g=>{
-    const o = document.createElement("option"); o.value = g.id; o.textContent = `${g.name} (${g.deviceIds?.length||0})`; sel.appendChild(o);
-  });
-  if (selectedId) sel.value = selectedId;
-}
-qs("#groupAdd").onclick = ()=>{
-  const name = qs("#groupName").value.trim(); if (!name) return alert("Podaj nazwę grupy");
-  const gs = loadGroups(); gs.push({ id: uuid(), name, deviceIds: [] }); saveGroups(gs); refreshGroups();
-  qs("#groupName").value = "";
-};
-qs("#groupDel").onclick = ()=>{
-  const id = qs("#groupList").value; if (!id) return alert("Wybierz grupę");
-  const gs = loadGroups(); const i = gs.findIndex(g=>g.id===id); if (i>=0){ gs.splice(i,1); saveGroups(gs); refreshGroups(); alert("Usunięto."); }
-};
-qs("#groupAttach").onclick = ()=>{
-  const gid = qs("#groupList").value; if (!gid) return alert("Wybierz grupę");
-  const selId = qs("#savedList").value; if (!selId) return alert("Wybierz urządzenie z listy");
-  const gs = loadGroups(); const g = gs.find(x=>x.id===gid); if (!g) return;
-  const dev = loadDevices().find(x=>x.id===selId); if (!dev) return;
-  g.deviceIds = g.deviceIds || []; if (!g.deviceIds.includes(dev.id)) g.deviceIds.push(dev.id);
-  saveGroups(gs); refreshGroups(gid); alert("Dodano do grupy.");
-};
-qs("#groupBri").oninput = e => qs("#groupBVal").textContent = e.target.value + "%";
-qs("#groupOn").onclick = async ()=>{ await groupCommand(async (d)=> api("/api/power",{method:"POST",headers:{'Content-Type':'application/json'},body:JSON.stringify({ device:d.device, sku:d.sku, on:true })})); };
-qs("#groupOff").onclick = async ()=>{ await groupCommand(async (d)=> api("/api/power",{method:"POST",headers:{'Content-Type':'application/json'},body:JSON.stringify({ device:d.device, sku:d.sku, on:false })})); };
-qs("#groupSetBri").onclick = async ()=>{ const v = Number(qs("#groupBri").value); await groupCommand(async (d)=> api("/api/brightness",{method:"POST",headers:{'Content-Type':'application/json'},body:JSON.stringify({ device:d.device, sku:d.sku, value:v })})); };
-qs("#groupSetColor").onclick = async ()=>{
-  const hex = qs("#groupColor").value.replace("#",""); const r = parseInt(hex.slice(0,2),16), g = parseInt(hex.slice(2,4),16), b = parseInt(hex.slice(4,6),16);
-  await groupCommand(async (d)=> api("/api/color",{method:"POST",headers:{'Content-Type':'application/json'},body:JSON.stringify({ device:d.device, sku:d.sku, r, g, b })}));
-};
-async function groupCommand(fn){
-  const id = qs("#groupList").value; if (!id) return alert("Wybierz grupę");
-  const gs = loadGroups(); const g = gs.find(x=>x.id===id); if (!g) return;
-  const devices = loadDevices().filter(d=>g.deviceIds?.includes(d.id));
-  for (const d of devices){ try{ const r = await fn(d); console.log("group cmd", d.label, r?.code); }catch{} }
-  alert("Wysłano komendy do grupy.");
-}
-
-// ===== Plan builder (rooms/walls) with editing & snap =====
-const map = qs("#map"); const gRooms = document.getElementById("rooms"); const gWalls = document.getElementById("walls"); const gDots = document.getElementById("dots");
-const bgImage = document.getElementById("bgImage"); const bgPreview = document.getElementById("bgPreview");
-
-function gridSnap(v, step){ return Math.round(v/step)*step; } // v in 0..1
-
-function renderPlan(){
-  const plan = loadPlan(); const devs = loadDevices();
-  // background
-  if (plan.bg){ bgImage.setAttribute("href", plan.bg); bgPreview.src = plan.bg; } else { bgImage.removeAttribute("href"); bgPreview.removeAttribute("src"); }
-  // rooms
-  gRooms.innerHTML = "";
-  (plan.rooms||[]).forEach(r=>{
-    const el = document.createElementNS("http://www.w3.org/2000/svg","rect");
-    el.setAttribute("x", r.x*1000); el.setAttribute("y", r.y*600); el.setAttribute("width", r.w*1000); el.setAttribute("height", r.h*600);
-    el.setAttribute("fill", r.color || "#f0f7ff"); el.setAttribute("stroke","#bcd7ff"); el.setAttribute("stroke-width","2");
-    gRooms.appendChild(el);
-    // label
-    const t = document.createElementNS("http://www.w3.org/2000/svg","text");
-    t.setAttribute("x", r.x*1000 + 6); t.setAttribute("y", r.y*600 + 16); t.setAttribute("font-size","12"); t.textContent = r.label || "Pokój";
-    t.setAttribute("fill","#444"); gRooms.appendChild(t);
-    // click -> edit
-    el.addEventListener("click",(e)=>{
-      e.preventDefault();
-      const name = prompt("Nazwa pokoju:", r.label || "Pokój");
-      if (name===null) return;
-      r.label = name;
-      const color = prompt("Kolor w hex (np. #f0f7ff):", r.color || "#f0f7ff");
-      if (color!==null) r.color = color;
-      savePlan(plan); renderPlan();
-    });
-    // right-click -> delete
-    el.addEventListener("contextmenu",(e)=>{
-      e.preventDefault();
-      if (confirm("Usunąć ten pokój?")){ plan.rooms = plan.rooms.filter(x=>x!==r); savePlan(plan); renderPlan(); }
-    });
-    // drag move
-    let dragging=false, sx=0, sy=0, start={x:r.x,y:r.y};
-    el.addEventListener("mousedown",(e)=>{ dragging=true; sx=e.clientX; sy=e.clientY; start={x:r.x,y:r.y}; e.preventDefault(); });
-    window.addEventListener("mousemove",(e)=>{
-      if(!dragging) return;
-      const rect=map.getBoundingClientRect();
-      let dx=(e.clientX-sx)/rect.width, dy=(e.clientY-sy)/rect.height;
-      let nx = clamp01(start.x+dx), ny = clamp01(start.y+dy);
-      if (qs("#snap").checked){ nx = gridSnap(nx, 0.02); ny = gridSnap(ny, 0.02); }
-      r.x = Math.max(0, Math.min(1-r.w, nx));
-      r.y = Math.max(0, Math.min(1-r.h, ny));
-      savePlan(plan); renderPlan();
-    });
-    window.addEventListener("mouseup",()=> dragging=false);
-  });
-  // walls (with draggable endpoints)
-  gWalls.innerHTML = "";
-  (plan.walls||[]).forEach(w=>{
-    const line = document.createElementNS("http://www.w3.org/2000/svg","line");
-    line.setAttribute("x1", w.x1*1000); line.setAttribute("y1", w.y1*600);
-    line.setAttribute("x2", w.x2*1000); line.setAttribute("y2", w.y2*600);
-    gWalls.appendChild(line);
-    // handles
-    const h1 = document.createElementNS("http://www.w3.org/2000/svg","circle");
-    h1.setAttribute("cx", w.x1*1000); h1.setAttribute("cy", w.y1*600); h1.setAttribute("r", 8); h1.setAttribute("fill","#222");
-    const h2 = document.createElementNS("http://www.w3.org/2000/svg","circle");
-    h2.setAttribute("cx", w.x2*1000); h2.setAttribute("cy", w.y2*600); h2.setAttribute("r", 8); h2.setAttribute("fill","#222");
-    gWalls.appendChild(h1); gWalls.appendChild(h2);
-    let dragH=null, sx=0, sy=0, start={};
-    function startDrag(h, which, e){
-      dragH=which; sx=e.clientX; sy=e.clientY; start={x1:w.x1,y1:w.y1,x2:w.x2,y2:w.y2}; e.preventDefault();
-    }
-    h1.addEventListener("mousedown",(e)=>startDrag(h1,"h1",e));
-    h2.addEventListener("mousedown",(e)=>startDrag(h2,"h2",e));
-    window.addEventListener("mousemove",(e)=>{
-      if (!dragH) return;
-      const rect=map.getBoundingClientRect();
-      let dx=(e.clientX-sx)/rect.width, dy=(e.clientY-sy)/rect.height;
-      let nx = clamp01((dragH==="h1"?start.x1:start.x2)+dx);
-      let ny = clamp01((dragH==="h1"?start.y1:start.y2)+dy);
-      if (qs("#snap").checked){ nx = gridSnap(nx, 0.02); ny = gridSnap(ny, 0.02); }
-      if (dragH==="h1"){ w.x1=nx; w.y1=ny; } else { w.x2=nx; w.y2=ny; }
-      savePlan(plan); renderPlan();
-    });
-    window.addEventListener("mouseup",()=> dragH=null);
-    // right-click delete wall
-    line.addEventListener("contextmenu",(e)=>{ e.preventDefault(); if (confirm("Usunąć ścianę?")){ plan.walls = plan.walls.filter(x=>x!==w); savePlan(plan); renderPlan(); } });
-  });
-  // dots (lights) with color from state if available
-  gDots.innerHTML = "";
-  devs.forEach(d=>{
-    if (typeof d.meta?.x !== "number" || typeof d.meta?.y !== "number") return;
-    const cx = d.meta.x*1000, cy = d.meta.y*600;
-    const g = document.createElementNS("http://www.w3.org/2000/svg","g");
-    const c = document.createElementNS("http://www.w3.org/2000/svg","circle");
-    const fill = d.state?.rgbHex || "#333333";
-    c.setAttribute("cx",cx); c.setAttribute("cy",cy); c.setAttribute("r",12); c.setAttribute("fill",fill); c.setAttribute("opacity","0.95"); c.setAttribute("class","dot");
-    const t = document.createElementNS("http://www.w3.org/2000/svg","text");
-    t.setAttribute("x",cx+14); t.setAttribute("y",cy+4); t.setAttribute("font-size","12"); t.textContent = d.label || d.sku;
-    g.appendChild(c); g.appendChild(t);
-    g.addEventListener("click",(e)=> openMiniFor(d, e));
-    // drag move dot
-    let dragging=false, sx=0, sy=0, start={x:d.meta.x,y:d.meta.y};
-    g.addEventListener("mousedown",(e)=>{ dragging=true; sx=e.clientX; sy=e.clientY; start={x:d.meta.x,y:d.meta.y}; e.preventDefault(); });
-    window.addEventListener("mousemove",(e)=>{
-      if(!dragging) return;
-      const rect=map.getBoundingClientRect();
-      let dx=(e.clientX-sx)/rect.width, dy=(e.clientY-sy)/rect.height;
-      let nx = clamp01(start.x+dx), ny = clamp01(start.y+dy);
-      if (qs("#snap").checked){ nx = gridSnap(nx, 0.02); ny = gridSnap(ny, 0.02); }
-      const all = loadDevices(); const idx = all.findIndex(x=>x.id===d.id);
-      if (idx>=0){ all[idx].meta = Object.assign({}, all[idx].meta, { x:nx, y:ny }); saveDevices(all); }
-      renderPlan();
-    });
-    window.addEventListener("mouseup",()=> dragging=false);
-    gDots.appendChild(g);
-  });
-}
-
-// Background image
-qs("#bgFile").onchange = (e)=>{
-  const f = e.target.files?.[0]; if(!f) return;
-  const reader = new FileReader();
-  reader.onload = ()=>{ const plan = loadPlan(); plan.bg = String(reader.result); savePlan(plan); renderPlan(); };
-  reader.readAsDataURL(f);
-};
-qs("#clearBg").onclick = ()=>{ const plan = loadPlan(); delete plan.bg; savePlan(plan); renderPlan(); };
-qs("#addRoom").onclick = ()=>{ const plan = loadPlan(); plan.rooms = plan.rooms||[]; plan.rooms.push({ id: uuid(), x:.1,y:.1,w:.3,h:.25,label:"Pokój",color:"#f0f7ff" }); savePlan(plan); renderPlan(); };
-qs("#addWall").onclick = ()=>{ const plan = loadPlan(); plan.walls = plan.walls||[]; plan.walls.push({ id: uuid(), x1:.2,y1:.2,x2:.6,y2:.2 }); savePlan(plan); renderPlan(); };
-qs("#clearPlan").onclick = ()=>{ if (confirm("Wyczyścić plan (pokoje/ściany)?")){ const bg = loadPlan().bg; savePlan({ rooms:[], walls:[], bg }); renderPlan(); } };
-
-// click to place position for current form device if exists
-map.addEventListener("click",(e)=>{
-  const rect = map.getBoundingClientRect();
-  const x = (e.clientX - rect.left) / rect.width;
-  const y = (e.clientY - rect.top) / rect.height;
-  const form = formToObj();
-  const list = loadDevices();
-  const idx = list.findIndex(it=>it.device===form.device && it.sku===form.sku);
-  if (idx>=0){
-    list[idx].meta = Object.assign({}, list[idx].meta, { x, y });
-    saveDevices(list); refreshSavedList(list[idx].id);
-    qs("#posxy").value = `${x.toFixed(3)},${y.toFixed(3)}`;
-  }
+// ===== tabs/views =====
+qsa('.tab').forEach(t=> t.onclick=()=>{
+  qsa('.tab').forEach(x=>x.classList.remove('active')); t.classList.add('active');
+  ['map','dashboard','three','schedules'].forEach(id=> qs('#view-'+id).style.display = (t.dataset.tab===id)?'':'none');
+  if (t.dataset.tab==='dashboard') renderCards();
+  if (t.dataset.tab==='three') initThree();
+  if (t.dataset.tab==='schedules') { refreshSchedulesUI(); buildScheduleTargets(); }
 });
 
-// ===== mini control =====
-const mini = document.getElementById("mini");
-let miniDev = null;
-function openMiniFor(dev, event){
-  miniDev = dev;
-  document.getElementById("miniLabel").textContent = dev.label || dev.sku || "Urządzenie";
-  document.getElementById("miniBri").value = Number(dev.state?.bri || 50);
-  document.getElementById("miniBriVal").textContent = (dev.state?.bri || 50) + "%";
-  const rect = map.getBoundingClientRect();
-  const x = event.clientX - rect.left, y = event.clientY - rect.top;
-  mini.style.left = (x + 10) + "px"; mini.style.top = (y + 10) + "px"; mini.style.display = "block";
-}
-document.getElementById("miniClose").onclick = ()=>{ mini.style.display="none"; miniDev=null; };
-document.getElementById("miniBri").oninput = (e)=>{ document.getElementById("miniBriVal").textContent = e.target.value + "%"; };
-document.getElementById("miniOn").onclick = async ()=>{ if (!miniDev) return; const rsp = await api("/api/power",{method:"POST",headers:{'Content-Type':'application/json'}, body: JSON.stringify({ device: miniDev.device, sku: miniDev.sku, on:true })}); show(qs("#raw"), rsp); };
-document.getElementById("miniOff").onclick = async ()=>{ if (!miniDev) return; const rsp = await api("/api/power",{method:"POST",headers:{'Content-Type':'application/json'}, body: JSON.stringify({ device: miniDev.device, sku: miniDev.sku, on:false })}); show(qs("#raw"), rsp); };
-document.getElementById("miniSetK").onclick = async ()=>{ if (!miniDev) return; const k = Number(document.getElementById("miniK").value); const rsp = await api("/api/colortemp",{method:"POST",headers:{'Content-Type':'application/json'}, body: JSON.stringify({ device: miniDev.device, sku: miniDev.sku, kelvin:k })}); show(qs("#raw"), rsp); };
-document.getElementById("miniSetColor").onclick = async ()=>{
-  if (!miniDev) return;
-  const hex = document.getElementById("miniColor").value.replace("#","");
-  const r = parseInt(hex.substring(0,2),16), g = parseInt(hex.substring(2,4),16), b = parseInt(hex.substring(4,6),16);
-  const rsp = await api("/api/color",{method:"POST",headers:{'Content-Type':'application/json'}, body: JSON.stringify({ device: miniDev.device, sku: miniDev.sku, r, g, b })});
-  show(qs("#raw"), rsp);
-};
+// ===== logout =====
+document.getElementById("logoutF").onsubmit = async (e)=>{ e.preventDefault(); await fetch("/api/logout",{method:"POST"}); location.href="/login.html"; };
 
-// ===== Auto-refresh state & colorized dots =====
-let auto = false, timer = null;
-qs("#toggleAuto").onclick = ()=>{
-  auto = !auto; qs("#stateBadge").textContent = "auto-refresh: " + (auto?"on":"off");
-  if (auto) startPolling(); else stopPolling();
-};
-function stopPolling(){ if (timer){ clearTimeout(timer); timer=null; } }
+// ===== device form/list =====
+function objToForm(o){ qs('#label').value=o.label||''; qs('#device').value=o.device||''; qs('#sku').value=o.sku||''; qs('#room').value=o.meta?.room||''; const xy=(typeof o.meta?.x==='number'&&typeof o.meta?.y==='number')?`${o.meta.x},${o.meta.y}`:''; qs('#posxy').value=xy; qs('#posz').value=o.meta?.z??''; }
+function formToObj(){ const [x,y]=(qs('#posxy').value||'').split(',').map(s=>parseFloat(s.trim())); return {label:qs('#label').value.trim(), device:qs('#device').value.trim(), sku:qs('#sku').value.trim(), meta:{room:qs('#room').value.trim()||undefined, x:isFinite(x)?x:undefined, y:isFinite(y)?y:undefined, z:parseFloat(qs('#posz').value)||undefined}}; }
+function refreshSavedList(selId){ const list=loadDevices(); const sel=qs('#savedList'); sel.innerHTML=''; list.forEach(it=>{ const o=document.createElement('option'); o.value=it.id; let label=it.label||it.sku||'Urządzenie'; if(it.meta?.room) label=`[${it.meta.room}] `+label; o.textContent=`${label} (${it.device} | ${it.sku})`; sel.appendChild(o); }); if(selId) sel.value=selId; renderPlan(); buildScheduleTargets(); }
+function upsertCurrent(asLabel){ const f=formToObj(); if(asLabel) f.label=asLabel; if(!f.device||!f.sku) return alert('Podaj device i sku'); const list=loadDevices(); const i=list.findIndex(x=>x.device===f.device&&x.sku===f.sku); if(i>=0) list[i]={...list[i],...f}; else list.push({id:uuid(),...f}); saveDevices(list); refreshSavedList(); alert('Zapisano.'); }
+qs('#save').onclick=()=>upsertCurrent(); qs('#saveQuick').onclick=()=>upsertCurrent('Żarówka - telewizor');
+qs('#delete').onclick=()=>{ const id=qs('#savedList').value; const list=loadDevices(); const i=list.findIndex(x=>x.id===id); if(i>=0){ list.splice(i,1); saveDevices(list); refreshSavedList(); alert('Usunięto.'); } };
+qs('#savedList').onchange=e=>{ const it=loadDevices().find(x=>x.id===e.target.value); if(it) objToForm(it); };
+qs('#select').onclick=()=>{ const it=loadDevices().find(x=>x.id===qs('#savedList').value); if(!it) return alert('Wybierz urządzenie'); objToForm(it); };
+
+// export/import
+qs('#exportDevices').onclick=()=>{ const data=JSON.stringify(loadDevices(),null,2); const url=URL.createObjectURL(new Blob([data],{type:'application/json'})); const a=document.createElement('a'); a.href=url; a.download='govee-devices.json'; a.click(); URL.revokeObjectURL(url); };
+qs('#importDevices').onchange=e=>{ const f=e.target.files?.[0]; if(!f) return; const r=new FileReader(); r.onload=()=>{ try{ const arr=JSON.parse(String(r.result||'[]')); if(!Array.isArray(arr)) throw new Error('format'); saveDevices(arr); refreshSavedList(); alert('Zaimportowano.'); }catch(err){ alert('Błąd importu'); } }; r.readAsText(f); };
+qs('#exportProject').onclick=()=>{ const data=JSON.stringify({devices:loadDevices(),plan:loadPlan(),groups:loadGroups(),schedules:loadSchedules()},null,2); const url=URL.createObjectURL(new Blob([data],{type:'application/json'})); const a=document.createElement('a'); a.href=url; a.download='govee-project.json'; a.click(); URL.revokeObjectURL(url); };
+qs('#importProject').onchange=e=>{ const f=e.target.files?.[0]; if(!f) return; const r=new FileReader(); r.onload=()=>{ try{ const obj=JSON.parse(String(r.result||'{}')); if(obj.devices) saveDevices(obj.devices); if(obj.plan) savePlan(obj.plan); if(obj.groups) saveGroups(obj.groups); if(obj.schedules) saveSchedules(obj.schedules); refreshSavedList(); renderPlan(); refreshGroups(); alert('Zaimportowano projekt.'); }catch(err){ alert('Błąd importu'); } }; r.readAsText(f); };
+
+// groups
+function refreshGroups(selId){ const gs=loadGroups(); const sel=qs('#groupList'); sel.innerHTML=''; gs.forEach(g=>{ const o=document.createElement('option'); o.value=g.id; o.textContent=`${g.name} (${g.deviceIds?.length||0})`; sel.appendChild(o); }); if(selId) sel.value=selId; }
+qs('#groupAdd').onclick=()=>{ const name=qs('#groupName').value.trim(); if(!name) return alert('Podaj nazwę grupy'); const gs=loadGroups(); gs.push({id:uuid(),name,deviceIds:[]}); saveGroups(gs); refreshGroups(); qs('#groupName').value=''; };
+qs('#groupDel').onclick=()=>{ const id=qs('#groupList').value; if(!id) return alert('Wybierz grupę'); const gs=loadGroups(); const i=gs.findIndex(g=>g.id===id); if(i>=0){ gs.splice(i,1); saveGroups(gs); refreshGroups(); alert('Usunięto.'); } };
+qs('#groupAttach').onclick=()=>{ const gid=qs('#groupList').value; if(!gid) return alert('Wybierz grupę'); const selId=qs('#savedList').value; if(!selId) return alert('Wybierz urządzenie'); const gs=loadGroups(); const g=gs.find(x=>x.id===gid); const dev=loadDevices().find(x=>x.id===selId); if(g&&dev){ g.deviceIds=g.deviceIds||[]; if(!g.deviceIds.includes(dev.id)) g.deviceIds.push(dev.id); saveGroups(gs); refreshGroups(gid); alert('Dodano do grupy.'); } };
+qs('#groupBri').oninput=e=> qs('#groupBVal').textContent=e.target.value+'%';
+qs('#groupOn').onclick=async()=>{ await groupCmd(d=> api('/api/power',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({device:d.device,sku:d.sku,on:true})})); };
+qs('#groupOff').onclick=async()=>{ await groupCmd(d=> api('/api/power',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({device:d.device,sku:d.sku,on:false})})); };
+qs('#groupSetBri').onclick=async()=>{ const v=Number(qs('#groupBri').value); await groupCmd(d=> api('/api/brightness',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({device:d.device,sku:d.sku,value:v})})); };
+qs('#groupSetColor').onclick=async()=>{ const hex=qs('#groupColor').value.replace('#',''); const r=parseInt(hex.slice(0,2),16), g=parseInt(hex.slice(2,4),16), b=parseInt(hex.slice(4,6),16); await groupCmd(d=> api('/api/color',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({device:d.device,sku:d.sku,r,g,b})})); };
+async function groupCmd(fn){ const id=qs('#groupList').value; if(!id) return alert('Wybierz grupę'); const gs=loadGroups(); const g=gs.find(x=>x.id===id); if(!g) return; const devices=loadDevices().filter(d=>g.deviceIds?.includes(d.id)); for(const d of devices){ try{ await fn(d); }catch{} } alert('Wysłano do grupy.'); }
+
+// ===== Map / builder & scale =====
+const mapEl=qs('#map'), gRooms=qs('#rooms'), gWalls=qs('#walls'), gDots=qs('#dots'), bgImage=qs('#bgImage');
+let markA=null, markB=null, pickMode=null; // 'A' or 'B'
+function gridSnap(v,step){ return Math.round(v/step)*step; }
+function planToMeters(x,y){ const plan=loadPlan(); const s=plan.scale; if(!s||!s.ax){ return {xm:NaN, ym:NaN}; } // simple isotropic scale based on AB length
+  const dx = (s.bx - s.ax), dy=(s.by - s.ay); const distNorm = Math.hypot(dx,dy); if (distNorm<=0) return {xm:NaN, ym:NaN};
+  const metersPerUnit = s.distM / distNorm; // units are 0..1 distances in map coords
+  // We treat (0..1) * 10 as meters scale—better: derive from metersPerUnit across width/height normalized to 1
+  // Using isotropic: x_m = x * metersPerUnit and y_m = y * metersPerUnit relative to width=1, height=1
+  return { xm: x * metersPerUnit, ym: y * metersPerUnit };
+}
+function renderPlan(){
+  const plan=loadPlan(), devs=loadDevices();
+  if(plan.bg) bgImage.setAttribute('href', plan.bg); else bgImage.removeAttribute('href');
+  // rooms
+  gRooms.innerHTML=''; (plan.rooms||[]).forEach(r=>{
+    const el=document.createElementNS('http://www.w3.org/2000/svg','rect');
+    el.setAttribute('x', r.x*1000); el.setAttribute('y', r.y*600); el.setAttribute('width', r.w*1000); el.setAttribute('height', r.h*600);
+    el.setAttribute('fill', r.color||'rgba(96,165,250,.12)'); el.setAttribute('stroke','rgba(96,165,250,.45)'); el.setAttribute('stroke-width','2');
+    gRooms.appendChild(el);
+    const t=document.createElementNS('http://www.w3.org/2000/svg','text'); t.setAttribute('x', r.x*1000+8); t.setAttribute('y', r.y*600+18); t.setAttribute('font-size','12'); t.setAttribute('fill','#d1d5db'); t.textContent=r.label||'Pokój'; gRooms.appendChild(t);
+    // edit & drag
+    el.addEventListener('click', (e)=>{ e.preventDefault(); const name=prompt('Nazwa pokoju:', r.label||'Pokój'); if(name===null) return; r.label=name; const color=prompt('Kolor hex (#RRGGBB):', r.color||'#1e293b'); if(color!==null) r.color=color; savePlan(plan); renderPlan(); });
+    el.addEventListener('contextmenu', (e)=>{ e.preventDefault(); if(confirm('Usunąć pokój?')){ plan.rooms=plan.rooms.filter(x=>x!==r); savePlan(plan); renderPlan(); } });
+    let drag=false,sx=0,sy=0,start={x:r.x,y:r.y}; el.addEventListener('mousedown',(e)=>{ drag=true; sx=e.clientX; sy=e.clientY; start={x:r.x,y:r.y}; e.preventDefault(); });
+    window.addEventListener('mousemove',(e)=>{ if(!drag) return; const rect=mapEl.getBoundingClientRect(); let dx=(e.clientX-sx)/rect.width, dy=(e.clientY-sy)/rect.height; let nx=start.x+dx, ny=start.y+dy; if(qs('#snap').checked){ nx=gridSnap(nx,0.02); ny=gridSnap(ny,0.02);} r.x=Math.max(0,Math.min(1-r.w,nx)); r.y=Math.max(0,Math.min(1-r.h,ny)); savePlan(plan); renderPlan(); });
+    window.addEventListener('mouseup',()=> drag=false);
+  });
+  // walls
+  gWalls.innerHTML=''; (plan.walls||[]).forEach(w=>{
+    const line=document.createElementNS('http://www.w3.org/2000/svg','line'); line.setAttribute('x1',w.x1*1000); line.setAttribute('y1',w.y1*600); line.setAttribute('x2',w.x2*1000); line.setAttribute('y2',w.y2*600); gWalls.appendChild(line);
+    const mk=(cx,cy,which)=>{ const h=document.createElementNS('http://www.w3.org/2000/svg','circle'); h.setAttribute('cx',cx); h.setAttribute('cy',cy); h.setAttribute('r',8); h.setAttribute('fill','#cfd8e3'); gWalls.appendChild(h);
+      let drag=false,sx=0,sy=0,start={...w}; h.addEventListener('mousedown',(e)=>{ drag=true; sx=e.clientX; sy=e.clientY; start={...w}; e.preventDefault(); });
+      window.addEventListener('mousemove',(e)=>{ if(!drag) return; const rect=mapEl.getBoundingClientRect(); let dx=(e.clientX-sx)/rect.width, dy=(e.clientY-sy)/rect.height; let nx=(which==='h1'?start.x1:start.x2)+dx; let ny=(which==='h1'?start.y1:start.y2)+dy; if(qs('#snap').checked){ nx=gridSnap(nx,0.02); ny=gridSnap(ny,0.02);} if(which==='h1'){ w.x1=clamp01(nx); w.y1=clamp01(ny);} else { w.x2=clamp01(nx); w.y2=clamp01(ny);} savePlan(plan); renderPlan(); });
+      window.addEventListener('mouseup',()=> drag=false);
+    };
+    mk(w.x1*1000,w.y1*600,'h1'); mk(w.x2*1000,w.y2*600,'h2');
+    line.addEventListener('contextmenu',(e)=>{ e.preventDefault(); if(confirm('Usunąć ścianę?')){ plan.walls=plan.walls.filter(x=>x!==w); savePlan(plan); renderPlan(); } });
+  });
+  // scale marks
+  if (plan.scale?.ax!=null){
+    const mk=document.createElementNS('http://www.w3.org/2000/svg','circle'); mk.setAttribute('cx',plan.scale.ax*1000); mk.setAttribute('cy',plan.scale.ay*600); mk.setAttribute('r',7); mk.setAttribute('fill','#22d3ee'); gWalls.appendChild(mk);
+  }
+  if (plan.scale?.bx!=null){
+    const mk2=document.createElementNS('http://www.w3.org/2000/svg','circle'); mk2.setAttribute('cx',plan.scale.bx*1000); mk2.setAttribute('cy',plan.scale.by*600); mk2.setAttribute('r',7); mk2.setAttribute('fill','#6366f1'); gWalls.appendChild(mk2);
+  }
+  // dots
+  gDots.innerHTML=''; devs.forEach(d=>{
+    if(typeof d.meta?.x!=='number'||typeof d.meta?.y!=='number') return;
+    const cx=d.meta.x*1000, cy=d.meta.y*600;
+    const g=document.createElementNS('http://www.w3.org/2000/svg','g');
+    const c=document.createElementNS('http://www.w3.org/2000/svg','circle');
+    const fill=d.state?.rgbHex||'#9ca3af';
+    c.setAttribute('cx',cx); c.setAttribute('cy',cy); c.setAttribute('r',13); c.setAttribute('fill',fill); c.setAttribute('class','dot');
+    c.dataset.color=fill;
+    const t=document.createElementNS('http://www.w3.org/2000/svg','text'); t.setAttribute('x',cx+16); t.setAttribute('y',cy+4); t.setAttribute('font-size','12'); t.setAttribute('fill','#e5e7eb'); t.textContent=d.label||d.sku;
+    g.appendChild(c); g.appendChild(t);
+    g.addEventListener('click', (e)=> openMiniFor(d,e));
+    // drag
+    let drag=false,sx=0,sy=0,start={x:d.meta.x,y:d.meta.y};
+    g.addEventListener('mousedown',(e)=>{ drag=true; sx=e.clientX; sy=e.clientY; start={x:d.meta.x,y:d.meta.y}; e.preventDefault(); });
+    window.addEventListener('mousemove',(e)=>{ if(!drag) return; const rect=mapEl.getBoundingClientRect(); let dx=(e.clientX-sx)/rect.width, dy=(e.clientY-sy)/rect.height; let nx=clamp01(start.x+dx), ny=clamp01(start.y+dy); if(qs('#snap').checked){ nx=gridSnap(nx,0.02); ny=gridSnap(ny,0.02);} const all=loadDevices(); const i=all.findIndex(x=>x.id===d.id); if(i>=0){ all[i].meta={...all[i].meta,x:nx,y:ny}; saveDevices(all); } renderPlan(); });
+    window.addEventListener('mouseup',()=> drag=false);
+    gDots.appendChild(g);
+  });
+  // scale badge
+  if (plan.scale?.distM){ qs('#scaleInfo').textContent = `Skala: A–B = ${plan.scale.distM} m`; } else { qs('#scaleInfo').textContent='Brak skali'; }
+}
+// pick A/B
+qs('#setA').onclick=()=>{ pickMode='A'; alert('Kliknij na mapę, by ustawić punkt A'); };
+qs('#setB').onclick=()=>{ pickMode='B'; alert('Kliknij na mapę, by ustawić punkt B'); };
+qs('#saveScale').onclick=()=>{ const m=parseFloat(qs('#distM').value); if(!isFinite(m)||m<=0) return alert('Podaj dystans w metrach'); const plan=loadPlan(); if(!plan.scale||plan.scale.ax==null||plan.scale.bx==null) return alert('Najpierw ustaw A i B'); plan.scale.distM=m; savePlan(plan); renderPlan(); };
+mapEl.addEventListener('click',(e)=>{
+  const rect=mapEl.getBoundingClientRect(); const x=(e.clientX-rect.left)/rect.width; const y=(e.clientY-rect.top)/rect.height;
+  if (pickMode==='A' || pickMode==='B'){
+    const plan=loadPlan(); plan.scale = plan.scale || {}; if(pickMode==='A'){ plan.scale.ax=x; plan.scale.ay=y; } else { plan.scale.bx=x; plan.scale.by=y; } savePlan(plan); pickMode=null; renderPlan(); return;
+  }
+  // set device position for current form device
+  const form=formToObj(); const list=loadDevices(); const idx=list.findIndex(it=>it.device===form.device && it.sku===form.sku);
+  if(idx>=0){ list[idx].meta={...list[idx].meta,x,y}; saveDevices(list); refreshSavedList(list[idx].id); qs('#posxy').value=`${x.toFixed(3)},${y.toFixed(3)}`; }
+});
+
+// mini & color tween
+const mini=qs('#mini'); let miniDev=null;
+function openMiniFor(dev,ev){
+  miniDev=dev; qs('#miniLabel').textContent=dev.label||dev.sku||'Urządzenie';
+  const plan=loadPlan(); const {xm,ym}=planToMeters(dev.meta?.x||0,dev.meta?.y||0);
+  qs('#miniXY').textContent = isFinite(xm)?`x=${xm.toFixed(2)}m, y=${ym.toFixed(2)}m`:'x=—, y=— (m)';
+  qs('#miniBri').value=Number(dev.state?.bri||50); qs('#miniBriVal').textContent=(dev.state?.bri||50)+'%';
+  const rect=mapEl.getBoundingClientRect(); const x=ev.clientX-rect.left, y=ev.clientY-rect.top;
+  mini.style.left=(x+10)+'px'; mini.style.top=(y+10)+'px'; mini.style.display='block';
+}
+qs('#miniClose').onclick=()=>{ mini.style.display='none'; miniDev=null; };
+qs('#miniBri').oninput=(e)=> qs('#miniBriVal').textContent=e.target.value+'%';
+qs('#miniOn').onclick=async()=>{ if(!miniDev) return; const rsp=await api('/api/power',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({device:miniDev.device,sku:miniDev.sku,on:true})}); show(qs('#raw'),rsp); };
+qs('#miniOff').onclick=async()=>{ if(!miniDev) return; const rsp=await api('/api/power',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({device:miniDev.device,sku:miniDev.sku,on:false})}); show(qs('#raw'),rsp); };
+qs('#miniSetK').onclick=async()=>{ if(!miniDev) return; const k=Number(qs('#miniK').value); const rsp=await api('/api/colortemp',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({device:miniDev.device,sku:miniDev.sku,kelvin:k})}); show(qs('#raw'),rsp); };
+qs('#miniSetColor').onclick=async()=>{ if(!miniDev) return; const hex=qs('#miniColor').value.replace('#',''); const r=parseInt(hex.slice(0,2),16), g=parseInt(hex.slice(2,4),16), b=parseInt(hex.slice(4,6),16); const rsp=await api('/api/color',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({device:miniDev.device,sku:miniDev.sku,r,g,b})}); show(qs('#raw'),rsp); };
+
+function hexToRgb(h){ const s=h.replace('#',''); return { r:parseInt(s.slice(0,2),16), g:parseInt(s.slice(2,4),16), b:parseInt(s.slice(4,6),16) }; }
+function rgbToHex(r,g,b){ return '#' + [r,g,b].map(v=>('0'+v.toString(16)).slice(-2)).join(''); }
+function tweenColor(el, from, to, ms=500){
+  const a=hexToRgb(from), b=hexToRgb(to); const start=performance.now();
+  function step(t){
+    const k=Math.min(1,(t-start)/ms);
+    const rr=Math.round(a.r + (b.r-a.r)*k), gg=Math.round(a.g + (b.g-a.g)*k), bb=Math.round(a.b + (b.b-a.b)*k);
+    el.setAttribute('fill', rgbToHex(rr,gg,bb));
+    if(k<1) requestAnimationFrame(step); else el.dataset.color=rgbToHex(rr,gg,bb);
+  }
+  requestAnimationFrame(step);
+}
+
+// ===== Auto-refresh + smooth color update =====
+let auto=false, timer=null;
+qs('#toggleAuto').onclick=()=>{ auto=!auto; qs('#stateBadge').textContent='auto-refresh: '+(auto?'on':'off'); if(auto) startPolling(); else stopPolling(); };
+function stopPolling(){ if(timer){ clearTimeout(timer); timer=null; } }
 async function startPolling(){
   stopPolling();
-  const list = loadDevices();
+  const list=loadDevices();
   for (const d of list){
     try{
-      const r = await api(`/api/state?device=${encodeURIComponent(d.device)}&sku=${encodeURIComponent(d.sku)}`);
-      const dev = r?.payload || {}; const caps = dev?.capabilities || [];
-      const bri = caps.find(c=>c.instance==="brightness")?.state?.value;
-      const rgb = caps.find(c=>c.instance==="colorRgb")?.state?.value;
-      const power = caps.find(c=>c.type==="devices.capabilities.on_off")?.state?.value;
-      // store simple state for rendering
-      const hex = (typeof rgb === "number") ? ("#" + ("000000"+rgb.toString(16)).slice(-6)) : (power? "#ffdd55" : "#333333");
-      d.state = { bri, rgb, power, rgbHex: hex };
-    }catch(e){ /* ignore */ }
+      const r=await api(`/api/state?device=${encodeURIComponent(d.device)}&sku=${encodeURIComponent(d.sku)}`);
+      const dev=r?.payload||{}; const caps=dev?.capabilities||[];
+      const bri=caps.find(c=>c.instance==='brightness')?.state?.value;
+      const rgb=caps.find(c=>c.instance==='colorRgb')?.state?.value;
+      const power=caps.find(c=>c.type==='devices.capabilities.on_off')?.state?.value;
+      const newHex=(typeof rgb==='number')?('#'+('000000'+rgb.toString(16)).slice(-6)):(power?'#ffd166':'#4b5563');
+      // if dot exists, tween its color
+      const dot = Array.from(document.querySelectorAll('#dots circle')).find(c=>Number(c.getAttribute('cx'))=== (d.meta?.x*1000) && Number(c.getAttribute('cy'))===(d.meta?.y*600));
+      if (dot){ const from = dot.dataset.color || dot.getAttribute('fill'); if (from !== newHex) tweenColor(dot, from, newHex, 500); }
+      d.state={ bri, rgb, power, rgbHex:newHex };
+    }catch(e){}
   }
-  saveDevices(list); renderPlan();
-  timer = setTimeout(startPolling, 3000);
+  saveDevices(list); // don't re-render immediately to preserve tween; re-render occasionally:
+  timer=setTimeout(()=>{ renderPlan(); startPolling(); }, 3000);
 }
 
-// ===== Panel controls + state log =====
-function deviceObj(){ return { device: qs("#device").value.trim(), sku: qs("#sku").value.trim() }; }
-qs("#refresh").onclick = async ()=>{
-  const {device, sku} = deviceObj(); if(!device || !sku) return alert("Podaj device i sku");
-  const r = await api(`/api/state?device=${encodeURIComponent(device)}&sku=${encodeURIComponent(sku)}`);
-  show(qs("#raw"), r);
-};
-qs("#on").onclick = async ()=>{ const rsp = await api("/api/power",{method:"POST",headers:{'Content-Type':'application/json'}, body: JSON.stringify({...deviceObj(), on:true})}); show(qs("#raw"), rsp); };
-qs("#off").onclick = async ()=>{ const rsp = await api("/api/power",{method:"POST",headers:{'Content-Type':'application/json'}, body: JSON.stringify({...deviceObj(), on:false})}); show(qs("#raw"), rsp); };
-qs("#brightness").oninput = e => qs("#bval").textContent = e.target.value;
-qs("#setBrightness").onclick = async ()=>{ const rsp = await api("/api/brightness",{method:"POST",headers:{'Content-Type':'application/json'}, body: JSON.stringify({...deviceObj(), value: qs("#brightness").value})}); show(qs("#raw"), rsp); };
-qs("#setColor").onclick = async ()=>{
-  const hex = qs("#color").value.replace("#","");
-  const r = parseInt(hex.substring(0,2),16), g = parseInt(hex.substring(2,4),16), b = parseInt(hex.substring(4,6),16);
-  const rsp = await api("/api/color",{method:"POST",headers:{'Content-Type':'application/json'}, body: JSON.stringify({...deviceObj(), r, g, b})}); show(qs("#raw"), rsp);
-};
-qs("#setKelvin").onclick = async ()=>{ const kelvin = Number(qs("#kelvin").value); const rsp = await api("/api/colortemp",{method:"POST",headers:{'Content-Type':'application/json'}, body: JSON.stringify({...deviceObj(), kelvin})}); show(qs("#raw"), rsp); };
+// ===== Controls & log =====
+function deviceObj(){ return { device:qs('#device').value.trim(), sku:qs('#sku').value.trim() }; }
+function show(el,obj){ el.textContent=JSON.stringify(obj,null,2); }
+qs('#refresh').onclick=async()=>{ const {device,sku}=deviceObj(); if(!device||!sku) return alert('Podaj device i sku'); const r=await api(`/api/state?device=${encodeURIComponent(device)}&sku=${encodeURIComponent(sku)}`); show(qs('#raw'),r); };
+qs('#on').onclick=async()=>{ const rsp=await api('/api/power',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...deviceObj(),on:true})}); show(qs('#raw'),rsp); };
+qs('#off').onclick=async()=>{ const rsp=await api('/api/power',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...deviceObj(),on:false})}); show(qs('#raw'),rsp); };
+qs('#brightness').oninput=e=> qs('#bval').textContent=e.target.value+'%';
+qs('#setBrightness').onclick=async()=>{ const rsp=await api('/api/brightness',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...deviceObj(),value:Number(qs('#brightness').value)})}); show(qs('#raw'),rsp); };
+qs('#setColor').onclick=async()=>{ const hex=qs('#color').value.replace('#',''); const r=parseInt(hex.slice(0,2),16), g=parseInt(hex.slice(2,4),16), b=parseInt(hex.slice(4,6),16); const rsp=await api('/api/color',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...deviceObj(),r,g,b})}); show(qs('#raw'),rsp); };
+qs('#setKelvin').onclick=async()=>{ const k=Number(qs('#kelvin').value); const rsp=await api('/api/colortemp',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...deviceObj(),kelvin:k})}); show(qs('#raw'),rsp); };
 
-// ===== Project Export/Import =====
-qs("#exportProject").onclick = ()=>{
-  const data = JSON.stringify({ devices: loadDevices(), plan: loadPlan(), groups: loadGroups() }, null, 2);
-  const blob = new Blob([data], {type:"application/json"});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a"); a.href = url; a.download = "govee-project.json"; a.click();
-  URL.revokeObjectURL(url);
-};
-qs("#importProject").onchange = (e)=>{
-  const f = e.target.files?.[0]; if(!f) return;
-  const reader = new FileReader();
-  reader.onload = ()=>{
-    try{
-      const obj = JSON.parse(String(reader.result||"{}"));
-      if (obj.devices) saveDevices(obj.devices);
-      if (obj.plan) savePlan(obj.plan);
-      if (obj.groups) saveGroups(obj.groups);
-      refreshSavedList(); renderPlan(); refreshGroups();
-      alert("Zaimportowano projekt.");
-    }catch(err){ alert("Błąd importu: "+err.message); }
-  };
-  reader.readAsText(f);
-};
+// ===== Background & plan operations =====
+qs('#bgFile').onchange=e=>{ const f=e.target.files?.[0]; if(!f) return; const r=new FileReader(); r.onload=()=>{ const p=loadPlan(); p.bg=String(r.result); savePlan(p); renderPlan(); }; r.readAsDataURL(f); };
+qs('#clearBg').onclick=()=>{ const p=loadPlan(); delete p.bg; savePlan(p); renderPlan(); };
+qs('#addRoom').onclick=()=>{ const p=loadPlan(); p.rooms=p.rooms||[]; p.rooms.push({id:uuid(),x:.1,y:.1,w:.28,h:.22,label:'Pokój',color:'rgba(96,165,250,.12)'}); savePlan(p); renderPlan(); };
+qs('#addWall').onclick=()=>{ const p=loadPlan(); p.walls=p.walls||[]; p.walls.push({id:uuid(),x1:.2,y1:.2,x2:.6,y2:.2}); savePlan(p); renderPlan(); };
+qs('#clearPlan').onclick=()=>{ if(confirm('Wyczyścić plan (pokoje/ściany)?')){ const bg=loadPlan().bg; savePlan({rooms:[],walls:[],bg}); renderPlan(); } };
 
-// init
-(function init(){
-  refreshSavedList();
-  refreshGroups();
-  renderPlan();
-})();
+// ===== Dashboard =====
+function renderCards(){
+  const cards=qs('#cards'); cards.innerHTML='';
+  const list=loadDevices();
+  list.forEach(d=>{
+    const div=document.createElement('div'); div.className='section'; div.style.padding='12px';
+    div.innerHTML=`<div class="row" style="justify-content:space-between"><b>${d.label||d.sku}</b><span class="pill">${d.sku}</span></div>
+      <div class="row"><span class="pill" style="background:${d.state?.rgbHex||'#64748b'}">  </span> <small>${d.device}</small></div>
+      <div class="row"><input type="range" min="1" max="100" value="${d.state?.bri||50}" data-id="${d.id}" class="cardBri"><button data-id="${d.id}" class="btn cardOn">On</button><button data-id="${d.id}" class="btn ghost cardOff">Off</button></div>
+      <div class="row"><input type="color" value="${d.state?.rgbHex||'#ffffff'}" data-id="${d.id}" class="cardColor"><button data-id="${d.id}" class="btn cardSetColor">Kolor</button></div>`;
+    cards.appendChild(div);
+  });
+  cards.querySelectorAll('.cardOn').forEach(b=> b.onclick=()=>deviceCommand(b.dataset.id,'power',{on:true}));
+  cards.querySelectorAll('.cardOff').forEach(b=> b.onclick=()=>deviceCommand(b.dataset.id,'power',{on:false}));
+  cards.querySelectorAll('.cardBri').forEach(s=> s.onchange=()=>deviceCommand(s.dataset.id,'brightness',{value:Number(s.value)}));
+  cards.querySelectorAll('.cardSetColor').forEach(b=> b.onclick=()=>{ const id=b.dataset.id; const inp=b.parentElement.querySelector('.cardColor'); const hex=inp.value.replace('#',''); const r=parseInt(hex.slice(0,2),16), g=parseInt(hex.slice(2,4),16), b2=parseInt(hex.slice(4,6),16); deviceCommand(id,'color',{r,g,b:b2}); });
+}
+async function deviceCommand(id, cmd, payload){
+  const d=loadDevices().find(x=>x.id===id); if(!d) return;
+  if(cmd==='power') await api('/api/power',{method:'POST',headers:{'Content-Type':'application/json'}, body: JSON.stringify({device:d.device,sku:d.sku,on:payload.on})});
+  if(cmd==='brightness') await api('/api/brightness',{method:'POST',headers:{'Content-Type':'application/json'}, body: JSON.stringify({device:d.device,sku:d.sku,value:payload.value})});
+  if(cmd==='color') await api('/api/color',{method:'POST',headers:{'Content-Type':'application/json'}, body: JSON.stringify({device:d.device,sku:d.sku,r:payload.r,g:payload.g,b:payload.b})});
+}
+
+// ===== Schedules (local) =====
+function buildScheduleTargets(){
+  const sel=qs('#schTarget'); sel.innerHTML='<option value="all">Wszystkie</option>';
+  loadDevices().forEach(d=>{ const o=document.createElement('option'); o.value='dev:'+d.id; o.textContent=d.label||d.sku; sel.appendChild(o); });
+  loadGroups().forEach(g=>{ const o=document.createElement('option'); o.value='grp:'+g.id; o.textContent='Grupa: '+g.name; sel.appendChild(o); });
+  const daysSel=qs('#schDays'); daysSel.innerHTML=''; ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].forEach((d,i)=>{ const o=document.createElement('option'); o.value=String(i); o.textContent=d; daysSel.appendChild(o); });
+}
+qs('#schAdd').onclick=()=>{
+  const time=qs('#schTime').value; if(!time) return alert('Podaj godzinę');
+  const target=qs('#schTarget').value; const action=qs('#schAction').value; const val=qs('#schValue').value.trim();
+  const days=Array.from(qs('#schDays').selectedOptions).map(o=>Number(o.value));
+  const arr=loadSchedules(); arr.push({ id:uuid(), time, target, action, value:val, days }); saveSchedules(arr); refreshSchedulesUI();
+};
+function refreshSchedulesUI(){
+  const list=qs('#schList'); list.innerHTML='';
+  const arr=loadSchedules();
+  arr.forEach(s=>{
+    const d=document.createElement('div'); d.className='section'; d.innerHTML=`<b>${s.time}</b> <span class="pill">${s.target}</span> <span class="pill">${s.action}:${s.value||'-'}</span> <span class="pill">dni:${(s.days||[]).join(',')}</span>
+      <div class="row" style="margin-top:6px"><button class="btn" data-id="${s.id}">Usuń</button></div>`;
+    list.appendChild(d);
+  });
+  list.querySelectorAll('button').forEach(b=> b.onclick=()=>{ const arr=loadSchedules().filter(x=>x.id!==b.dataset.id); saveSchedules(arr); refreshSchedulesUI(); });
+}
+// runner every minute
+setInterval(async()=>{
+  const now=new Date(); const hh=String(now.getHours()).padStart(2,'0'); const mm=String(now.getMinutes()).padStart(2,'0'); const day=(now.getDay()+6)%7; // Mon=0
+  const arr=loadSchedules();
+  for(const s of arr){
+    if (s.time===`${hh}:${mm}` && (!s.days?.length || s.days.includes(day))){
+      const target=s.target||'all';
+      let devices=[];
+      if (target==='all') devices = loadDevices();
+      else if (target.startsWith('dev:')){ const id=target.slice(4); const d=loadDevices().find(x=>x.id===id); if(d) devices=[d]; }
+      else if (target.startsWith('grp:')){ const gid=target.slice(4); const g=loadGroups().find(x=>x.id===gid); if(g) devices=loadDevices().filter(d=>g.deviceIds?.includes(d.id)); }
+      for (const d of devices){
+        try{
+          if (s.action==='on') await api('/api/power',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({device:d.device,sku:d.sku,on:true})});
+          if (s.action==='off') await api('/api/power',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({device:d.device,sku:d.sku,on:false})});
+          if (s.action==='bri'){ const v=Number(s.value||50); await api('/api/brightness',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({device:d.device,sku:d.sku,value:v})}); }
+          if (s.action==='kelvin'){ const k=Number(s.value||3000); await api('/api/colortemp',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({device:d.device,sku:d.sku,kelvin:k})}); }
+          if (s.action==='color'){ const hex=(s.value||'#ffffff').replace('#',''); const r=parseInt(hex.slice(0,2),16), g=parseInt(hex.slice(2,4),16), b=parseInt(hex.slice(4,6),16); await api('/api/color',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({device:d.device,sku:d.sku,r,g,b})}); }
+        }catch(e){}
+      }
+    }
+  }
+}, 60000);
+
+// ===== 3D mode (Three.js) =====
+let threeInited=false;
+function initThree(){
+  if (threeInited) return;
+  threeInited=true;
+  const mount=qs('#threeMount');
+  const w=mount.clientWidth, h=mount.clientHeight;
+  const scene=new THREE.Scene();
+  scene.background = null;
+  const camera=new THREE.PerspectiveCamera(60, w/h, 0.1, 1000);
+  camera.position.set(0, 8, 12);
+  const renderer=new THREE.WebGLRenderer({antialias:true, alpha:true});
+  renderer.setSize(w,h); mount.innerHTML=''; mount.appendChild(renderer.domElement);
+  const light=new THREE.DirectionalLight(0xffffff, 1.0); light.position.set(5,10,7); scene.add(light);
+  scene.add(new THREE.AmbientLight(0x445566, 0.6));
+
+  // floor
+  const floor=new THREE.Mesh(new THREE.PlaneGeometry(40, 24), new THREE.MeshStandardMaterial({color:0x0b1220, metalness:0.2, roughness:0.9}));
+  floor.rotation.x=-Math.PI/2; scene.add(floor);
+
+  // scale
+  const plan=loadPlan();
+  const hasScale = plan.scale?.distM && plan.scale.ax!=null && plan.scale.bx!=null;
+  const unitToM = (hasScale)? (plan.scale.distM / Math.hypot(plan.scale.bx-plan.scale.ax, plan.scale.by-plan.scale.ay)) : 10; // fallback arbitrary
+
+  // rooms to boxes
+  (plan.rooms||[]).forEach(r=>{
+    const wM = r.w * unitToM * 10;
+    const hM = r.h * unitToM * 10;
+    const box=new THREE.Mesh(new THREE.BoxGeometry(wM, 2.6, hM), new THREE.MeshStandardMaterial({color:0x1e293b, metalness:0.1, roughness:0.8, transparent:true, opacity:0.7}));
+    box.position.set((r.x-0.5)*unitToM*10 + wM/2 - 0, 1.3, (r.y-0.5)*unitToM*10 + hM/2 - 0);
+    scene.add(box);
+  });
+  // devices as glowing spheres
+  loadDevices().forEach(d=>{
+    if(typeof d.meta?.x!=='number'||typeof d.meta?.y!=='number') return;
+    const color = parseInt((d.state?.rgbHex||'#60a5fa').replace('#',''),16);
+    const sp=new THREE.Mesh(new THREE.SphereGeometry(0.2, 16, 16), new THREE.MeshStandardMaterial({color, emissive: color, emissiveIntensity: 0.6}));
+    sp.position.set((d.meta.x-0.5)*unitToM*10, (d.meta.z||2.2), (d.meta.y-0.5)*unitToM*10);
+    scene.add(sp);
+  });
+
+  // orbit-lite
+  let rotY=0;
+  function animate(){ requestAnimationFrame(animate); camera.position.x = Math.sin(rotY)*12; camera.position.z = Math.cos(rotY)*12; camera.lookAt(0,1,0); renderer.render(scene, camera); }
+  animate();
+  mount.onmousemove = (e)=>{ const x=(e.clientX - mount.getBoundingClientRect().left)/mount.clientWidth; rotY = (x-0.5)*0.8; };
+  window.addEventListener('resize',()=>{ const w2=mount.clientWidth, h2=mount.clientHeight; renderer.setSize(w2,h2); camera.aspect=w2/h2; camera.updateProjectionMatrix(); });
+}
+
+// ===== init =====
+function init(){
+  refreshSavedList(); refreshGroups(); renderPlan(); renderCards(); buildScheduleTargets(); refreshSchedulesUI();
+}
+init();
 </script>
 </body>
 </html>

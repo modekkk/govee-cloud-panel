@@ -1,3 +1,8 @@
 <!doctype html><meta charset='utf-8'><title>Login</title>
-<form method="post" action="/api/login" onsubmit="event.preventDefault();fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u.value,password:p.value})}).then(r=>r.ok?location.href='/':msg.textContent='Błędny login/hasło')">
-<input id="u" placeholder="login" value="admin"><input id="p" type="password" value="werusia321"><button>Zaloguj</button><div id="msg"></div></form>
+<style>body{height:100vh;margin:0;display:grid;place-items:center;background:linear-gradient(135deg,#0ea5e9,#6366f1);} .card{padding:26px;background:rgba(255,255,255,.12);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.25);border-radius:18px;color:#fff;font-family:system-ui}</style>
+<div class="card">
+<h2>SmartStudio – logowanie</h2>
+<form id="f" onsubmit="event.preventDefault();fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u.value.trim(),password:p.value})}).then(r=>r.ok?location.href='/':(msg.textContent='Błędny login/hasło'))">
+<input id="u" placeholder="admin" value="admin"><br>
+<input id="p" type="password" value="werusia321"><br>
+<button>Zaloguj</button><div id="msg"></div></form></div>
