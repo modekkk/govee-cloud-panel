@@ -15,10 +15,11 @@
   .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
   @media (max-width: 720px){ .grid{grid-template-columns:1fr} }
   select{min-width:320px;padding:6px}
+  pre{background:#f6f6f6;border:1px solid #e5e5e5;padding:10px;border-radius:8px;max-height:260px;overflow:auto}
 </style>
 <body>
   <h1>Govee – Panel (Cloud API)</h1>
-  <p class="muted">Najpierw pobierz listę i wybierz urządzenie. Pól <b>device</b> i <b>sku</b> nie wpisujesz ręcznie.</p>
+  <p class="muted">Najpierw pobierz listę i wybierz urządzenie.</p>
 
   <fieldset>
     <legend>Wybór urządzenia</legend>
@@ -47,6 +48,7 @@
       <button id="refresh">Odśwież stan</button>
       <span id="devinfo" class="muted"></span>
     </div>
+    <pre id="raw"></pre>
   </fieldset>
 
   <fieldset>
@@ -88,29 +90,27 @@ const qs = (s)=>document.querySelector(s);
 const api = (p, opt)=>fetch(p, opt).then(r=>r.json());
 const deviceObj = ()=>({ device: qs("#device").value.trim(), sku: qs("#sku").value.trim() });
 let DEVICES = [];
+const show = (el, obj)=> el.textContent = JSON.stringify(obj, null, 2);
 
 qs("#btnFetch").onclick = async () => {
-  try {
-    const data = await api("/api/devices");
-    DEVICES = data?.data?.list || [];
-    qs("#count").textContent = `Znaleziono: ${DEVICES.length}`;
-    const sel = qs("#deviceSelect");
-    sel.innerHTML = '<option value="">— wybierz z listy —</option>';
-    DEVICES.forEach((d, i) => {
-      const name = d.deviceName || d.sku || "Urządzenie";
-      const opt = document.createElement("option");
-      opt.value = String(i);
-      opt.textContent = `${name} [${d.sku}] (${d.device})`;
-      sel.appendChild(opt);
-    });
-    if (!DEVICES.length) {
-      qs("#devinfo").textContent = "Brak urządzeń w chmurze – sprawdź Wi‑Fi (2.4 GHz) i konto API.";
-    } else {
-      qs("#devinfo").textContent = "Wybierz urządzenie z listy.";
-    }
-  } catch (e) {
-    qs("#devinfo").textContent = "Błąd pobierania listy urządzeń";
+  const data = await api("/api/devices");
+  DEVICES = data?.data?.list || [];
+  qs("#count").textContent = `Znaleziono: ${DEVICES.length}`;
+  const sel = qs("#deviceSelect");
+  sel.innerHTML = '<option value="">— wybierz z listy —</option>';
+  DEVICES.forEach((d, i) => {
+    const name = d.deviceName || d.sku || "Urządzenie";
+    const opt = document.createElement("option");
+    opt.value = String(i);
+    opt.textContent = `${name} [${d.sku}] (${d.device})`;
+    sel.appendChild(opt);
+  });
+  if (!DEVICES.length) {
+    qs("#devinfo").textContent = "Brak urządzeń – sprawdź Wi‑Fi (2.4 GHz) / konto API";
+  } else {
+    qs("#devinfo").textContent = "Wybierz urządzenie z listy.";
   }
+  show(qs("#raw"), data);
 };
 
 qs("#deviceSelect").onchange = (e)=>{
@@ -129,25 +129,29 @@ qs("#refresh").onclick = async ()=>{
   const r = await api(`/api/state?device=${encodeURIComponent(device)}&sku=${encodeURIComponent(sku)}`);
   const caps = r?.data?.capabilities || [];
   const online = caps.find(c=>c.type==="devices.capabilities.online")?.state;
-  qs("#devinfo").textContent = `online: ${online ?? "?"}, capabilities: ${caps.length}`;
+  qs("#devinfo").textContent = r?.code === 200 ? `online: ${online ?? "?"}, capabilities: ${caps.length}` : `Błąd: ${r?.code} ${r?.msg || r?.message || ""}`;
+  show(qs("#raw"), r);
 };
 
 qs("#on").onclick = async ()=>{
-  const r = await api("/api/power",{method:"POST",headers:{'Content-Type':'application/json'},
+  const rsp = await api("/api/power",{method:"POST",headers:{'Content-Type':'application/json'},
     body: JSON.stringify({...deviceObj(), on:true})});
-  qs("#status").textContent = r?.msg ?? r?.code ?? "OK";
+  qs("#status").textContent = rsp?.msg ?? rsp?.code ?? "OK";
+  show(qs("#raw"), rsp);
 };
 qs("#off").onclick = async ()=>{
-  const r = await api("/api/power",{method:"POST",headers:{'Content-Type':'application/json'},
+  const rsp = await api("/api/power",{method:"POST",headers:{'Content-Type':'application/json'},
     body: JSON.stringify({...deviceObj(), on:false})});
-  qs("#status").textContent = r?.msg ?? r?.code ?? "OK";
+  qs("#status").textContent = rsp?.msg ?? rsp?.code ?? "OK";
+  show(qs("#raw"), rsp);
 };
 
 qs("#brightness").oninput = e => qs("#bval").textContent = e.target.value;
 qs("#setBrightness").onclick = async ()=>{
-  const r = await api("/api/brightness",{method:"POST",headers:{'Content-Type':'application/json'},
+  const rsp = await api("/api/brightness",{method:"POST",headers:{'Content-Type':'application/json'},
     body: JSON.stringify({...deviceObj(), value: qs("#brightness").value})});
-  alert(r?.msg ?? r?.code ?? "OK");
+  alert(rsp?.msg ?? rsp?.code ?? "OK");
+  show(qs("#raw"), rsp);
 };
 
 qs("#setColor").onclick = async ()=>{
@@ -158,6 +162,7 @@ qs("#setColor").onclick = async ()=>{
   const rsp = await api("/api/color",{method:"POST",headers:{'Content-Type':'application/json'},
     body: JSON.stringify({...deviceObj(), r, g, b})});
   alert(rsp?.msg ?? rsp?.code ?? "OK");
+  show(qs("#raw"), rsp);
 };
 
 qs("#setKelvin").onclick = async ()=>{
@@ -165,6 +170,7 @@ qs("#setKelvin").onclick = async ()=>{
   const rsp = await api("/api/colortemp",{method:"POST",headers:{'Content-Type':'application/json'},
     body: JSON.stringify({...deviceObj(), kelvin})});
   alert(rsp?.msg ?? rsp?.code ?? "OK");
+  show(qs("#raw"), rsp);
 };
 </script>
 </body>

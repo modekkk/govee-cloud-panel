@@ -21,16 +21,21 @@ app.use((req, res, next) => {
 
 app.use(express.static("public"));
 
+// Devices
 app.get("/api/devices", async (_req, res) => {
   try {
     const r = await fetch(`${API}/user/devices`, { headers: H });
     const body = await r.json();
+    console.log("[devices] status:", r.status, "items:", Array.isArray(body?.data?.list) ? body.data.list.length : "n/a");
+    if (r.status !== 200) console.log("[devices] body:", body);
     res.status(r.status).json(body);
   } catch (e) {
+    console.error("[devices] upstream error:", e);
     res.status(502).json({ error: "Upstream error", details: String(e) });
   }
 });
 
+// State
 app.get("/api/state", async (req, res) => {
   try {
     const { device, sku } = req.query;
@@ -40,13 +45,16 @@ app.get("/api/state", async (req, res) => {
     url.searchParams.set("sku", sku);
     const r = await fetch(url, { headers: H });
     const body = await r.json();
-    res.status(r.status).json(body);
+    console.log("[state] status:", r.status, "device:", device, "sku:", sku);
+    if (r.status !== 200) console.log("[state] body:", body);
+    res.status(r.status).json({ url: url.toString(), ...body });
   } catch (e) {
+    console.error("[state] upstream error:", e);
     res.status(502).json({ error: "Upstream error", details: String(e) });
   }
 });
 
-async function control(res, payload) {
+async function control(res, payload, tag) {
   try {
     const r = await fetch(`${API}/device/control`, {
       method: "POST",
@@ -54,8 +62,11 @@ async function control(res, payload) {
       body: JSON.stringify(payload),
     });
     const body = await r.json();
+    console.log(`[control:${tag}] status:`, r.status, "msg:", body?.msg ?? body?.message);
+    if (r.status !== 200) console.log(`[control:${tag}] body:`, body);
     res.status(r.status).json(body);
   } catch (e) {
+    console.error(`[control:${tag}] upstream error:`, e);
     res.status(502).json({ error: "Upstream error", details: String(e) });
   }
 }
@@ -69,7 +80,7 @@ app.post("/api/power", async (req, res) => {
       device: { device, sku },
       capability: { type: "devices.capabilities.on_off", instance: "on_off", value: on ? 1 : 0 },
     },
-  });
+  }, "power");
 });
 
 app.post("/api/brightness", async (req, res) => {
@@ -82,7 +93,7 @@ app.post("/api/brightness", async (req, res) => {
       device: { device, sku },
       capability: { type: "devices.capabilities.range", instance: "brightness", value: v },
     },
-  });
+  }, "brightness");
 });
 
 app.post("/api/color", async (req, res) => {
@@ -95,7 +106,7 @@ app.post("/api/color", async (req, res) => {
       device: { device, sku },
       capability: { type: "devices.capabilities.color_setting", instance: "color_rgb", value: { r: rr, g: gg, b: bb } },
     },
-  });
+  }, "color_rgb");
 });
 
 app.post("/api/colortemp", async (req, res) => {
@@ -108,7 +119,7 @@ app.post("/api/colortemp", async (req, res) => {
       device: { device, sku },
       capability: { type: "devices.capabilities.color_setting", instance: "color_temperature", value: k },
     },
-  });
+  }, "color_temp");
 });
 
 app.get("*", (req, res, next) => {
