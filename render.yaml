@@ -1,0 +1,16 @@
+
+services:
+  - type: web
+    name: govee-cloud-panel
+    env: node
+    plan: free
+    buildCommand: "npm install"
+    startCommand: "npm start"
+    autoDeploy: true
+    envVars:
+      - key: GOVEE_API_KEY
+        sync: false
+      - key: NODE_ENV
+        value: production
+      - key: CORS_ORIGIN
+        value: "*"
