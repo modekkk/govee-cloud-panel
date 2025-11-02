@@ -16,15 +16,17 @@
   @media (max-width: 720px){ .grid{grid-template-columns:1fr} }
   select{min-width:320px;padding:6px}
   pre{background:#f6f6f6;border:1px solid #e5e5e5;padding:10px;border-radius:8px;max-height:260px;overflow:auto}
+  input[type=text]{width:100%}
 </style>
 <body>
   <h1>Govee – Panel (Cloud API)</h1>
-  <p class="muted">Pobierz listę i wybierz urządzenie. Ten panel obsługuje <b>powerSwitch</b>, <b>brightness</b>, <b>colorRgb</b> i <b>colorTemperatureK</b>.</p>
+  <p class="muted">Jeżeli lista urządzeń jest pusta, możesz <b>wkleić ręcznie</b> <code>device</code> i <code>sku</code> (np. <code>H6004</code>).</p>
 
   <fieldset>
     <legend>Wybór urządzenia</legend>
     <div class="row">
       <button id="btnFetch">Pobierz z konta</button>
+      <button id="btnShowRaw">Pokaż RAW urządzeń</button>
       <select id="deviceSelect">
         <option value="">— wybierz z listy —</option>
       </select>
@@ -37,11 +39,11 @@
     <div class="row grid">
       <div>
         <label>ID urządzenia (device):</label><br/>
-        <input id="device" readonly style="width:100%"/>
+        <input id="device" placeholder="np. 6F:F6:..." />
       </div>
       <div>
         <label>SKU:</label><br/>
-        <input id="sku" readonly style="width:100%"/>
+        <input id="sku" placeholder="np. H6004" />
       </div>
     </div>
     <div class="row">
@@ -105,11 +107,12 @@ qs("#btnFetch").onclick = async () => {
     opt.textContent = `${name} [${d.sku}] (${d.device})`;
     sel.appendChild(opt);
   });
-  if (!DEVICES.length) {
-    qs("#devinfo").textContent = "Brak urządzeń – sprawdź Wi‑Fi (2.4 GHz) / konto API";
-  } else {
-    qs("#devinfo").textContent = "Wybierz urządzenie z listy.";
-  }
+  qs("#devinfo").textContent = DEVICES.length ? "Wybierz urządzenie z listy." : "Brak urządzeń – możesz wkleić device i sku ręcznie.";
+};
+
+qs("#btnShowRaw").onclick = async ()=>{
+  const data = await api("/api/devices");
+  show(qs("#raw"), data);
 };
 
 qs("#deviceSelect").onchange = (e)=>{
@@ -124,11 +127,10 @@ qs("#deviceSelect").onchange = (e)=>{
 
 qs("#refresh").onclick = async ()=>{
   const {device, sku} = deviceObj();
-  if(!device || !sku){ qs("#devinfo").textContent = "Wybierz urządzenie z listy"; return; }
+  if(!device || !sku){ qs("#devinfo").textContent = "Podaj device i sku (lub wybierz z listy)"; return; }
   const r = await api(`/api/state?device=${encodeURIComponent(device)}&sku=${encodeURIComponent(sku)}`);
   const dev = Array.isArray(r?.data) ? r.data[0] : null;
   const caps = dev?.capabilities || [];
-  const online = caps.find(c=>c.type==="devices.capabilities.on_off" && c.instance==="powerSwitch") ? "?" : "?";
   qs("#devinfo").textContent = r?.code === 200 ? `${dev?.deviceName || dev?.sku || "Urządzenie"} – capabilities: ${caps.length}` : `Błąd: ${r?.code} ${r?.msg || r?.message || ""}`;
   show(qs("#raw"), r);
 };
