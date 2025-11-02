@@ -1,0 +1,138 @@
+
+<!doctype html>
+<html lang="pl">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Govee H6004 – Panel</title>
+<style>
+  body{font-family:system-ui,Segoe UI,Roboto,Arial;margin:24px;max-width:900px}
+  .row{display:flex;gap:12px;align-items:center;margin:10px 0;flex-wrap:wrap}
+  input[type="range"]{width:300px}
+  fieldset{border:1px solid #ddd;padding:16px;border-radius:12px;margin-bottom:16px}
+  legend{padding:0 6px;color:#555}
+  button{padding:8px 12px;border-radius:10px;border:1px solid #ccc;cursor:pointer}
+  .muted{color:#666}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media (max-width: 720px){ .grid{grid-template-columns:1fr} }
+</style>
+<body>
+  <h1>Govee H6004 – Panel</h1>
+  <p class="muted">Ten panel korzysta z oficjalnego <b>Govee Cloud API</b>. Twój klucz jest przechowywany na serwerze.</p>
+
+  <fieldset>
+    <legend>Urządzenie</legend>
+    <div class="row grid">
+      <div>
+        <label>ID urządzenia:</label><br/>
+        <input id="device" placeholder="np. 12:34:56:78:AB:CD" style="width:100%"/>
+      </div>
+      <div>
+        <label>SKU:</label><br/>
+        <input id="sku" placeholder="np. H6004" style="width:100%"/>
+      </div>
+    </div>
+    <div class="row">
+      <button id="btnFetch">Pobierz z konta</button>
+      <button id="refresh">Odśwież stan</button>
+      <span id="devinfo" class="muted"></span>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Zasilanie</legend>
+    <div class="row">
+      <button id="on">Włącz</button>
+      <button id="off">Wyłącz</button>
+      <span id="status"></span>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Jasność</legend>
+    <div class="row">
+      <input type="range" id="brightness" min="0" max="100" value="50"/>
+      <span id="bval">50</span>%
+      <button id="setBrightness">Ustaw</button>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Kolor RGB</legend>
+    <div class="row">
+      <input type="color" id="color" value="#ffffff"/>
+      <button id="setColor">Ustaw kolor</button>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Temperatura barwowa (K)</legend>
+    <div class="row">
+      <input type="number" id="kelvin" value="3000" step="50"/>
+      <button id="setKelvin">Ustaw CCT</button>
+    </div>
+  </fieldset>
+
+<script>
+const qs = (s)=>document.querySelector(s);
+const api = (p, opt)=>fetch(p, opt).then(r=>r.json());
+const device = ()=>({ device: qs("#device").value.trim(), sku: qs("#sku").value.trim() });
+
+// Load first H6004 device from account
+qs("#btnFetch").onclick = async () => {
+  try {
+    const data = await api("/api/devices");
+    const list = data?.data?.list || [];
+    const d = list.find(x => (x.sku||"").startsWith("H6004")) || list[0];
+    if(!d){ qs("#devinfo").textContent = "Nie znaleziono urządzeń na koncie."; return; }
+    qs("#device").value = d.device;
+    qs("#sku").value = d.sku;
+    qs("#devinfo").textContent = `Wybrano: ${d.device} / ${d.sku}`;
+  } catch (e) {
+    qs("#devinfo").textContent = "Błąd pobierania urządzeń";
+  }
+};
+
+qs("#refresh").onclick = async ()=>{
+  const {device:dev, sku} = device();
+  if(!dev || !sku){ qs("#devinfo").textContent = "Podaj device i sku"; return; }
+  const r = await api(`/api/state?device=${encodeURIComponent(dev)}&sku=${encodeURIComponent(sku)}`);
+  qs("#devinfo").textContent = r?.data ? "Stan pobrany" : "Brak danych";
+};
+
+qs("#on").onclick = async ()=>{
+  const r = await api("/api/power",{method:"POST",headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({...device(), on:true})});
+  qs("#status").textContent = r?.msg ?? r?.code ?? "OK";
+};
+qs("#off").onclick = async ()=>{
+  const r = await api("/api/power",{method:"POST",headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({...device(), on:false})});
+  qs("#status").textContent = r?.msg ?? r?.code ?? "OK";
+};
+
+qs("#brightness").oninput = e => qs("#bval").textContent = e.target.value;
+qs("#setBrightness").onclick = async ()=>{
+  const r = await api("/api/brightness",{method:"POST",headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({...device(), value: qs("#brightness").value})});
+  alert(r?.msg ?? r?.code ?? "OK");
+};
+
+qs("#setColor").onclick = async ()=>{
+  const hex = qs("#color").value.replace("#","");
+  const r = parseInt(hex.substring(0,2),16);
+  const g = parseInt(hex.substring(2,4),16);
+  const b = parseInt(hex.substring(4,6),16);
+  const rsp = await api("/api/color",{method:"POST",headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({...device(), r, g, b})});
+  alert(rsp?.msg ?? rsp?.code ?? "OK");
+};
+
+qs("#setKelvin").onclick = async ()=>{
+  const kelvin = Number(qs("#kelvin").value);
+  const rsp = await api("/api/colortemp",{method:"POST",headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({...device(), kelvin})});
+  alert(rsp?.msg ?? rsp?.code ?? "OK");
+};
+</script>
+</body>
+</html>
