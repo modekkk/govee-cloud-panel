@@ -1,22 +1,57 @@
 
 import express from "express";
+import session from "express-session";
 import cors from "cors";
 import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
 dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-const TOKEN = process.env.BASIC_AUTH_TOKEN;
-app.use((req, res, next) => {
-  if (!TOKEN) return next();
-  const auth = req.headers.authorization || "";
-  if (auth.startsWith("Bearer ") && auth.slice(7) === TOKEN) return next();
-  res.setHeader("WWW-Authenticate", "Bearer");
-  return res.status(401).json({ error: "Unauthorized" });
+// Simple session auth (MemoryStore) — for single-instance demo
+app.use(session({
+  secret: process.env.SESSION_SECRET || "govee-demo-secret",
+  resave: false,
+  saveUninitialized: false,
+  cookie: { httpOnly: true, sameSite: "lax" }
+}));
+
+// CORS only for APIs if you expose cross-origin; otherwise not needed
+app.use(cors({ origin: process.env.CORS_ORIGIN || "*", credentials: true }));
+
+// --- Auth ---
+const USER = process.env.ADMIN_USER || "admin";
+const PASS = process.env.ADMIN_PASS || "werusia321";
+
+function requireAuth(req, res, next){
+  if (req.session?.auth === true) return next();
+  if (req.path.startsWith("/api/")) return res.status(401).json({ error: "Unauthorized" });
+  return res.redirect("/login.html");
+}
+
+app.get("/login.html", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "login.html"));
+});
+app.post("/api/login", (req, res)=>{
+  const { username, password } = req.body || {};
+  if (username === USER && password === PASS){
+    req.session.auth = true;
+    return res.json({ ok: true });
+  }
+  return res.status(401).json({ ok: false, error: "Invalid credentials" });
+});
+app.post("/api/logout", (req, res)=>{
+  req.session.destroy(()=> res.json({ ok: true }));
 });
 
-app.use(cors({ origin: process.env.CORS_ORIGIN || "*" }));
+// --- Protected area ---
+app.use(requireAuth);
 
 const API = "https://openapi.api.govee.com/router/api/v1";
 const KEY = process.env.GOVEE_API_KEY;
@@ -71,7 +106,7 @@ async function controlSmart(device, sku, capability) {
   return { ...second, variant: "A", firstAttempt: { status, body } };
 }
 
-// Standard controls
+// Basic controls
 app.post("/api/power", async (req, res) => {
   const { device, sku, on } = req.body || {};
   if (!device || !sku || typeof on !== "boolean") return res.status(400).json({ error: "Missing device, sku or on(boolean)" });
@@ -79,7 +114,6 @@ app.post("/api/power", async (req, res) => {
   const { status, body, variant } = await controlSmart(device, sku, capability);
   res.status(status).json({ ...body, variant });
 });
-
 app.post("/api/brightness", async (req, res) => {
   const { device, sku, value } = req.body || {};
   const v = Number(value);
@@ -88,7 +122,6 @@ app.post("/api/brightness", async (req, res) => {
   const { status, body, variant } = await controlSmart(device, sku, capability);
   res.status(status).json({ ...body, variant });
 });
-
 app.post("/api/color", async (req, res) => {
   const { device, sku, r, g, b } = req.body || {};
   const rr = Number(r), gg = Number(g), bb = Number(b);
@@ -98,7 +131,6 @@ app.post("/api/color", async (req, res) => {
   const { status, body, variant } = await controlSmart(device, sku, capability);
   res.status(status).json({ ...body, variant });
 });
-
 app.post("/api/colortemp", async (req, res) => {
   const { device, sku, kelvin } = req.body || {};
   const k = Number(kelvin);
@@ -107,8 +139,6 @@ app.post("/api/colortemp", async (req, res) => {
   const { status, body, variant } = await controlSmart(device, sku, capability);
   res.status(status).json({ ...body, variant });
 });
-
-// Scenes
 app.post("/api/scene", async (req, res) => {
   const { device, sku, value, type } = req.body || {};
   if (!device || !sku) return res.status(400).json({ error: "Missing device or sku" });
@@ -118,10 +148,11 @@ app.post("/api/scene", async (req, res) => {
   res.status(status).json({ ...body, variant });
 });
 
+// Serve app
 app.get("*", (req, res, next) => {
   if (req.path.startsWith("/api/")) return next();
-  res.sendFile(process.cwd() + "/public/index.html");
+  res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
 const port = process.env.PORT || 3000;
-app.listen(port, () => console.log("Govee panel v4.8 running on port", port));
+app.listen(port, () => console.log("Govee panel v4.9 running on port", port));

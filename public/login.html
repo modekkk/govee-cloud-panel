@@ -1,0 +1,35 @@
+
+<!doctype html>
+<html lang="pl">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Logowanie – Govee Panel</title>
+<style>
+  body{font-family:system-ui,Segoe UI,Roboto,Arial;display:grid;place-items:center;height:100vh;background:#f7fafc}
+  .card{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:24px;min-width:320px;box-shadow:0 10px 30px rgba(0,0,0,.06)}
+  input{width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:10px;margin:8px 0}
+  button{width:100%;padding:10px;border-radius:10px;border:1px solid #2563eb;background:#2563eb;color:white;cursor:pointer}
+  h1{font-size:18px;margin:0 0 12px}
+  .muted{color:#6b7280;font-size:12px}
+</style>
+<body>
+  <div class="card">
+    <h1>Zaloguj się</h1>
+    <form id="f">
+      <input id="u" placeholder="login" value="admin"/>
+      <input id="p" type="password" placeholder="hasło" value="werusia321"/>
+      <button>Zaloguj</button>
+    </form>
+    <div id="msg" class="muted"></div>
+  </div>
+<script>
+document.getElementById("f").onsubmit = async (e)=>{
+  e.preventDefault();
+  const username = document.getElementById("u").value.trim();
+  const password = document.getElementById("p").value;
+  const r = await fetch("/api/login",{method:"POST",headers:{'Content-Type':'application/json'},body:JSON.stringify({username,password})});
+  if (r.ok){ location.href = "/"; } else { document.getElementById("msg").textContent = "Błędny login lub hasło"; }
+};
+</script>
+</body>
+</html>
