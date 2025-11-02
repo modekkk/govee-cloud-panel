@@ -6,31 +6,21 @@ dotenv.config();
 
 const app = express();
 app.use(express.json());
-
-// tighten CORS in production by setting CORS_ORIGIN env to your domain
-const corsOrigin = process.env.CORS_ORIGIN || "*";
-app.use(cors({ origin: corsOrigin }));
+app.use(cors({ origin: process.env.CORS_ORIGIN || "*" }));
 
 const API = "https://openapi.api.govee.com/router/api/v1";
 const KEY = process.env.GOVEE_API_KEY;
+const H = { "Content-Type": "application/json", "Govee-API-Key": KEY };
 
-// simple guard to ensure key is present
+app.get("/healthz", (_req, res) => res.json({ ok: true }));
+
 app.use((req, res, next) => {
-  if (!KEY) {
-    return res.status(500).json({ error: "Missing GOVEE_API_KEY env var on server" });
-  }
+  if (!KEY) return res.status(500).json({ error: "Missing GOVEE_API_KEY env var on server" });
   next();
 });
 
-const H = { "Content-Type": "application/json", "Govee-API-Key": KEY };
-
-// Health check
-app.get("/healthz", (_req, res) => res.json({ ok: true }));
-
-// Static frontend
 app.use(express.static("public"));
 
-// 1) List devices
 app.get("/api/devices", async (_req, res) => {
   try {
     const r = await fetch(`${API}/user/devices`, { headers: H });
@@ -41,7 +31,6 @@ app.get("/api/devices", async (_req, res) => {
   }
 });
 
-// 2) Device state
 app.get("/api/state", async (req, res) => {
   try {
     const { device, sku } = req.query;
@@ -57,7 +46,6 @@ app.get("/api/state", async (req, res) => {
   }
 });
 
-// helper: POST control with given capability
 async function control(res, payload) {
   try {
     const r = await fetch(`${API}/device/control`, {
@@ -72,7 +60,6 @@ async function control(res, payload) {
   }
 }
 
-// 3) Power on/off
 app.post("/api/power", async (req, res) => {
   const { device, sku, on } = req.body || {};
   if (!device || !sku || typeof on !== "boolean") return res.status(400).json({ error: "Missing device, sku or on(boolean)" });
@@ -80,16 +67,11 @@ app.post("/api/power", async (req, res) => {
     requestId: Date.now().toString(),
     payload: {
       device: { device, sku },
-      capability: {
-        type: "devices.capabilities.on_off",
-        instance: "on_off",
-        value: on ? 1 : 0,
-      },
+      capability: { type: "devices.capabilities.on_off", instance: "on_off", value: on ? 1 : 0 },
     },
   });
 });
 
-// 4) Brightness 0-100
 app.post("/api/brightness", async (req, res) => {
   const { device, sku, value } = req.body || {};
   const v = Number(value);
@@ -98,16 +80,11 @@ app.post("/api/brightness", async (req, res) => {
     requestId: Date.now().toString(),
     payload: {
       device: { device, sku },
-      capability: {
-        type: "devices.capabilities.range",
-        instance: "brightness",
-        value: v,
-      },
+      capability: { type: "devices.capabilities.range", instance: "brightness", value: v },
     },
   });
 });
 
-// 5) Color RGB 0-255
 app.post("/api/color", async (req, res) => {
   const { device, sku, r, g, b } = req.body || {};
   const rr = Number(r), gg = Number(g), bb = Number(b);
@@ -116,16 +93,11 @@ app.post("/api/color", async (req, res) => {
     requestId: Date.now().toString(),
     payload: {
       device: { device, sku },
-      capability: {
-        type: "devices.capabilities.color_setting",
-        instance: "color_rgb",
-        value: { r: rr, g: gg, b: bb },
-      },
+      capability: { type: "devices.capabilities.color_setting", instance: "color_rgb", value: { r: rr, g: gg, b: bb } },
     },
   });
 });
 
-// 6) Color temperature (Kelvin)
 app.post("/api/colortemp", async (req, res) => {
   const { device, sku, kelvin } = req.body || {};
   const k = Number(kelvin);
@@ -134,16 +106,11 @@ app.post("/api/colortemp", async (req, res) => {
     requestId: Date.now().toString(),
     payload: {
       device: { device, sku },
-      capability: {
-        type: "devices.capabilities.color_setting",
-        instance: "color_temperature",
-        value: k,
-      },
+      capability: { type: "devices.capabilities.color_setting", instance: "color_temperature", value: k },
     },
   });
 });
 
-// Fallback: serve index.html for root if not found
 app.get("*", (req, res, next) => {
   if (req.path.startsWith("/api/")) return next();
   res.sendFile(process.cwd() + "/public/index.html");

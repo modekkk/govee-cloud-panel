@@ -3,7 +3,7 @@
 <html lang="pl">
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Govee H6004 – Panel</title>
+<title>Govee – Panel (Cloud API)</title>
 <style>
   body{font-family:system-ui,Segoe UI,Roboto,Arial;margin:24px;max-width:900px}
   .row{display:flex;gap:12px;align-items:center;margin:10px 0;flex-wrap:wrap}
@@ -14,25 +14,36 @@
   .muted{color:#666}
   .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
   @media (max-width: 720px){ .grid{grid-template-columns:1fr} }
+  select{min-width:320px;padding:6px}
 </style>
 <body>
-  <h1>Govee H6004 – Panel</h1>
-  <p class="muted">Ten panel korzysta z oficjalnego <b>Govee Cloud API</b>. Twój klucz jest przechowywany na serwerze.</p>
+  <h1>Govee – Panel (Cloud API)</h1>
+  <p class="muted">Najpierw pobierz listę i wybierz urządzenie. Pól <b>device</b> i <b>sku</b> nie wpisujesz ręcznie.</p>
 
   <fieldset>
-    <legend>Urządzenie</legend>
+    <legend>Wybór urządzenia</legend>
+    <div class="row">
+      <button id="btnFetch">Pobierz z konta</button>
+      <select id="deviceSelect">
+        <option value="">— wybierz z listy —</option>
+      </select>
+      <span id="count" class="muted"></span>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Parametry urządzenia</legend>
     <div class="row grid">
       <div>
-        <label>ID urządzenia:</label><br/>
-        <input id="device" placeholder="np. 12:34:56:78:AB:CD" style="width:100%"/>
+        <label>ID urządzenia (device):</label><br/>
+        <input id="device" readonly style="width:100%"/>
       </div>
       <div>
         <label>SKU:</label><br/>
-        <input id="sku" placeholder="np. H6004" style="width:100%"/>
+        <input id="sku" readonly style="width:100%"/>
       </div>
     </div>
     <div class="row">
-      <button id="btnFetch">Pobierz z konta</button>
       <button id="refresh">Odśwież stan</button>
       <span id="devinfo" class="muted"></span>
     </div>
@@ -75,45 +86,67 @@
 <script>
 const qs = (s)=>document.querySelector(s);
 const api = (p, opt)=>fetch(p, opt).then(r=>r.json());
-const device = ()=>({ device: qs("#device").value.trim(), sku: qs("#sku").value.trim() });
+const deviceObj = ()=>({ device: qs("#device").value.trim(), sku: qs("#sku").value.trim() });
+let DEVICES = [];
 
-// Load first H6004 device from account
 qs("#btnFetch").onclick = async () => {
   try {
     const data = await api("/api/devices");
-    const list = data?.data?.list || [];
-    const d = list.find(x => (x.sku||"").startsWith("H6004")) || list[0];
-    if(!d){ qs("#devinfo").textContent = "Nie znaleziono urządzeń na koncie."; return; }
-    qs("#device").value = d.device;
-    qs("#sku").value = d.sku;
-    qs("#devinfo").textContent = `Wybrano: ${d.device} / ${d.sku}`;
+    DEVICES = data?.data?.list || [];
+    qs("#count").textContent = `Znaleziono: ${DEVICES.length}`;
+    const sel = qs("#deviceSelect");
+    sel.innerHTML = '<option value="">— wybierz z listy —</option>';
+    DEVICES.forEach((d, i) => {
+      const name = d.deviceName || d.sku || "Urządzenie";
+      const opt = document.createElement("option");
+      opt.value = String(i);
+      opt.textContent = `${name} [${d.sku}] (${d.device})`;
+      sel.appendChild(opt);
+    });
+    if (!DEVICES.length) {
+      qs("#devinfo").textContent = "Brak urządzeń w chmurze – sprawdź Wi‑Fi (2.4 GHz) i konto API.";
+    } else {
+      qs("#devinfo").textContent = "Wybierz urządzenie z listy.";
+    }
   } catch (e) {
-    qs("#devinfo").textContent = "Błąd pobierania urządzeń";
+    qs("#devinfo").textContent = "Błąd pobierania listy urządzeń";
   }
 };
 
+qs("#deviceSelect").onchange = (e)=>{
+  const idx = Number(e.target.value);
+  if (!Number.isFinite(idx)) return;
+  const d = DEVICES[idx];
+  if (!d) return;
+  qs("#device").value = d.device;
+  qs("#sku").value = d.sku;
+  qs("#devinfo").textContent = `Wybrano: ${d.deviceName || d.sku} – ${d.device}`;
+};
+
 qs("#refresh").onclick = async ()=>{
-  const {device:dev, sku} = device();
-  if(!dev || !sku){ qs("#devinfo").textContent = "Podaj device i sku"; return; }
-  const r = await api(`/api/state?device=${encodeURIComponent(dev)}&sku=${encodeURIComponent(sku)}`);
-  qs("#devinfo").textContent = r?.data ? "Stan pobrany" : "Brak danych";
+  const {device, sku} = deviceObj();
+  if(!device || !sku){ qs("#devinfo").textContent = "Wybierz urządzenie z listy"; return; }
+  const r = await api(`/api/state?device=${encodeURIComponent(device)}&sku=${encodeURIComponent(sku)}`);
+  const caps = r?.data?.capabilities || [];
+  const online = caps.find(c=>c.type==="devices.capabilities.online")?.state;
+  qs("#devinfo").textContent = `online: ${online ?? "?"}, capabilities: ${caps.length}`;
 };
 
 qs("#on").onclick = async ()=>{
   const r = await api("/api/power",{method:"POST",headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({...device(), on:true})});
+    body: JSON.stringify({...deviceObj(), on:true})});
   qs("#status").textContent = r?.msg ?? r?.code ?? "OK";
 };
 qs("#off").onclick = async ()=>{
   const r = await api("/api/power",{method:"POST",headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({...device(), on:false})});
+    body: JSON.stringify({...deviceObj(), on:false})});
   qs("#status").textContent = r?.msg ?? r?.code ?? "OK";
 };
 
 qs("#brightness").oninput = e => qs("#bval").textContent = e.target.value;
 qs("#setBrightness").onclick = async ()=>{
   const r = await api("/api/brightness",{method:"POST",headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({...device(), value: qs("#brightness").value})});
+    body: JSON.stringify({...deviceObj(), value: qs("#brightness").value})});
   alert(r?.msg ?? r?.code ?? "OK");
 };
 
@@ -123,14 +156,14 @@ qs("#setColor").onclick = async ()=>{
   const g = parseInt(hex.substring(2,4),16);
   const b = parseInt(hex.substring(4,6),16);
   const rsp = await api("/api/color",{method:"POST",headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({...device(), r, g, b})});
+    body: JSON.stringify({...deviceObj(), r, g, b})});
   alert(rsp?.msg ?? rsp?.code ?? "OK");
 };
 
 qs("#setKelvin").onclick = async ()=>{
   const kelvin = Number(qs("#kelvin").value);
   const rsp = await api("/api/colortemp",{method:"POST",headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({...device(), kelvin})});
+    body: JSON.stringify({...deviceObj(), kelvin})});
   alert(rsp?.msg ?? rsp?.code ?? "OK");
 };
 </script>

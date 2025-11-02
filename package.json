@@ -7,8 +7,7 @@
     "node": ">=18"
   },
   "scripts": {
-    "start": "node server.mjs",
-    "dev": "node server.mjs"
+    "start": "node server.mjs"
   },
   "dependencies": {
     "express": "^4.19.2",
