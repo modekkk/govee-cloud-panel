@@ -6,6 +6,16 @@ dotenv.config();
 
 const app = express();
 app.use(express.json());
+
+const TOKEN = process.env.BASIC_AUTH_TOKEN;
+app.use((req, res, next) => {
+  if (!TOKEN) return next();
+  const auth = req.headers.authorization || "";
+  if (auth.startsWith("Bearer ") && auth.slice(7) === TOKEN) return next();
+  res.setHeader("WWW-Authenticate", "Bearer");
+  return res.status(401).json({ error: "Unauthorized" });
+});
+
 app.use(cors({ origin: process.env.CORS_ORIGIN || "*" }));
 
 const API = "https://openapi.api.govee.com/router/api/v1";
@@ -53,54 +63,59 @@ async function controlVariantA(payloadA) {
   return { status: r.status, body };
 }
 async function controlSmart(device, sku, capability) {
-  // Variant B (flat device,sku) — preferred
   const payloadB = { requestId: Date.now().toString(), payload: { device, sku, capability } };
   let { status, body } = await controlVariantB(payloadB);
   if (status === 200 && body?.code === 200) return { status, body, variant: "B" };
-  // Fallback Variant A (nested device object)
   const payloadA = { requestId: Date.now().toString(), payload: { device: { device, sku }, capability } };
   const second = await controlVariantA(payloadA);
   return { ...second, variant: "A", firstAttempt: { status, body } };
 }
 
-// POWER
+// Standard controls
 app.post("/api/power", async (req, res) => {
   const { device, sku, on } = req.body || {};
   if (!device || !sku || typeof on !== "boolean") return res.status(400).json({ error: "Missing device, sku or on(boolean)" });
   const capability = { type: "devices.capabilities.on_off", instance: "powerSwitch", value: on ? 1 : 0 };
-  const { status, body, variant, firstAttempt } = await controlSmart(device, sku, capability);
-  res.status(status).json({ ...body, variant, firstAttempt });
+  const { status, body, variant } = await controlSmart(device, sku, capability);
+  res.status(status).json({ ...body, variant });
 });
 
-// BRIGHTNESS
 app.post("/api/brightness", async (req, res) => {
   const { device, sku, value } = req.body || {};
   const v = Number(value);
   if (!device || !sku || !Number.isFinite(v)) return res.status(400).json({ error: "Missing device, sku or value(number)" });
   const capability = { type: "devices.capabilities.range", instance: "brightness", value: v };
-  const { status, body, variant, firstAttempt } = await controlSmart(device, sku, capability);
-  res.status(status).json({ ...body, variant, firstAttempt });
+  const { status, body, variant } = await controlSmart(device, sku, capability);
+  res.status(status).json({ ...body, variant });
 });
 
-// COLOR RGB (int)
 app.post("/api/color", async (req, res) => {
   const { device, sku, r, g, b } = req.body || {};
   const rr = Number(r), gg = Number(g), bb = Number(b);
   if (!device || !sku || [rr,gg,bb].some(x => !Number.isFinite(x))) return res.status(400).json({ error: "Missing device, sku or r,g,b numbers" });
   const int24 = (rr << 16) | (gg << 8) | bb;
   const capability = { type: "devices.capabilities.color_setting", instance: "colorRgb", value: int24 };
-  const { status, body, variant, firstAttempt } = await controlSmart(device, sku, capability);
-  res.status(status).json({ ...body, variant, firstAttempt });
+  const { status, body, variant } = await controlSmart(device, sku, capability);
+  res.status(status).json({ ...body, variant });
 });
 
-// CCT
 app.post("/api/colortemp", async (req, res) => {
   const { device, sku, kelvin } = req.body || {};
   const k = Number(kelvin);
   if (!device || !sku || !Number.isFinite(k)) return res.status(400).json({ error: "Missing device, sku or kelvin(number)" });
   const capability = { type: "devices.capabilities.color_setting", instance: "colorTemperatureK", value: k };
-  const { status, body, variant, firstAttempt } = await controlSmart(device, sku, capability);
-  res.status(status).json({ ...body, variant, firstAttempt });
+  const { status, body, variant } = await controlSmart(device, sku, capability);
+  res.status(status).json({ ...body, variant });
+});
+
+// Scenes
+app.post("/api/scene", async (req, res) => {
+  const { device, sku, value, type } = req.body || {};
+  if (!device || !sku) return res.status(400).json({ error: "Missing device or sku" });
+  const instance = type === "diy" ? "diyScene" : "lightScene";
+  const capability = { type: "devices.capabilities.dynamic_scene", instance, value: String(value || "") };
+  const { status, body, variant } = await controlSmart(device, sku, capability);
+  res.status(status).json({ ...body, variant });
 });
 
 app.get("*", (req, res, next) => {
@@ -109,4 +124,4 @@ app.get("*", (req, res, next) => {
 });
 
 const port = process.env.PORT || 3000;
-app.listen(port, () => console.log("Govee panel v4.5 running on port", port));
+app.listen(port, () => console.log("Govee panel v4.8 running on port", port));

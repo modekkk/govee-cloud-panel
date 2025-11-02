@@ -3,36 +3,118 @@
 <html lang="pl">
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Govee – Panel (Cloud API) v4.5</title>
+<title>Govee – Panel (Cloud API) v4.8</title>
 <style>
-  body{font-family:system-ui,Segoe UI,Roboto,Arial;margin:24px;max-width:900px}
+  :root{ --accent:#2563eb; --bg:#fafafa; --muted:#666; }
+  body{font-family:system-ui,Segoe UI,Roboto,Arial;margin:20px;max-width:1280px;background:#fff}
+  h1{margin:8px 0 16px}
   .row{display:flex;gap:12px;align-items:center;margin:10px 0;flex-wrap:wrap}
-  input[type="range"]{width:300px}
-  fieldset{border:1px solid #ddd;padding:16px;border-radius:12px;margin-bottom:16px}
+  fieldset{border:1px solid #e5e5e5;padding:14px;border-radius:12px;margin-bottom:16px;background:#fff}
   legend{padding:0 6px;color:#555}
-  button{padding:8px 12px;border-radius:10px;border:1px solid #ccc;cursor:pointer}
-  .muted{color:#666}
+  button{padding:8px 12px;border-radius:10px;border:1px solid #ccc;cursor:pointer;background:#fff}
+  button.primary{background:var(--accent);color:white;border-color:var(--accent)}
+  .muted{color:var(--muted)}
   .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-  @media (max-width: 720px){ .grid{grid-template-columns:1fr} }
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+  @media (max-width: 1024px){ .grid3{grid-template-columns:1fr} .grid{grid-template-columns:1fr} }
   pre{background:#f6f6f6;border:1px solid #e5e5e5;padding:10px;border-radius:8px;max-height:260px;overflow:auto}
-  input[type=text]{width:100%}
+  input[type=text],input[type=number]{width:100%;padding:6px;border:1px solid #ddd;border-radius:8px}
+  input[type=range]{width:260px}
+  .card{border:1px solid #eee;border-radius:12px;padding:12px;background:#fff}
+  .small{font-size:12px}
+  .tools{display:flex;gap:10px;flex-wrap:wrap}
+  .canvasWrap{position:relative}
+  svg.map{width:100%;height:520px;border:1px dashed #ccc;border-radius:12px;background:var(--bg)}
+  .dot{cursor:grab}
+  .dot:active{cursor:grabbing}
+  .mini{position:absolute;display:none;min-width:220px;background:#fff;border:1px solid #ddd;border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.1);padding:10px;z-index:10}
+  .mini .row{margin:6px 0}
+  .bgPreview{max-width:320px;max-height:180px;border:1px solid #ddd;border-radius:8px}
 </style>
 <body>
-  <h1>Govee – Panel (Cloud API) <small>v4.5</small></h1>
-  <p class="muted">Sterowanie wysyłane w <b>wariancie B</b> (flat: <code>payload: { device, sku, capability }</code>), z <b>fallbackiem A</b> (nested).</p>
+  <h1>Govee – Panel (Cloud API) <small>v4.8</small></h1>
+  <p class="muted">Nowości: <b>tło planu mieszkania</b>, <b>przeciąganie żarówek</b>, <b>mini panel nad punktem</b>, <b>prosty builder planu</b> (pokoje/ściany), wszystko zapisuje się lokalnie.</p>
 
-  <fieldset>
-    <legend>Parametry urządzenia</legend>
-    <div class="row grid">
-      <div>
-        <label>ID urządzenia (device):</label><br/>
-        <input id="device" placeholder="np. 6F:F6:..." />
+  <fieldset class="card">
+    <legend>Autoryzacja (opcjonalna)</legend>
+    <div class="row">
+      <input id="token" placeholder="Bearer token (jeśli ustawisz BASIC_AUTH_TOKEN na serwerze)" style="min-width:360px"/>
+      <button id="saveToken">Zapisz token</button>
+      <span class="muted small">Token dodawany jako Authorization: Bearer ...</span>
+    </div>
+  </fieldset>
+
+  <fieldset class="card">
+    <legend>Menadżer urządzeń</legend>
+    <div class="grid3">
+      <div><label>Nazwa</label><input id="label" placeholder="np. Żarówka - telewizor"/></div>
+      <div><label>Device</label><input id="device" placeholder="np. 6F:F6:..."/></div>
+      <div><label>SKU</label><input id="sku" placeholder="np. H6004"/></div>
+    </div>
+    <div class="tools">
+      <button id="save" class="primary">Zapisz/aktualizuj</button>
+      <button id="saveQuick">Zapisz jako „Żarówka - telewizor”</button>
+      <button id="delete">Usuń</button>
+      <button id="export">Eksport JSON</button>
+      <input type="file" id="importFile" accept="application/json"/>
+    </div>
+    <div class="row">
+      <label>Lista</label>
+      <select id="savedList"><option value="">— wybierz zapisane urządzenie —</option></select>
+      <button id="select">Użyj</button>
+    </div>
+    <details>
+      <summary>Pozycja / meta</summary>
+      <div class="grid3">
+        <div><label>Pokój</label><input id="room" placeholder="np. salon"/></div>
+        <div><label>Pozycja X,Y (0..1)</label><input id="posxy" placeholder="np. 0.50,0.25"/></div>
+        <div><label>Z (wysokość)</label><input id="posz" placeholder="np. 2.4"/></div>
       </div>
-      <div>
-        <label>SKU:</label><br/>
-        <input id="sku" placeholder="np. H6004" />
+    </details>
+  </fieldset>
+
+  <fieldset class="card">
+    <legend>Plan mieszkania</legend>
+    <div class="tools">
+      <input type="file" id="bgFile" accept="image/*"/>
+      <button id="clearBg">Usuń tło</button>
+      <img id="bgPreview" class="bgPreview" alt="Podgląd tła"/>
+      <span class="muted small">Tło zapisuje się lokalnie (base64). SVG skaluje się responsywnie.</span>
+    </div>
+    <div class="tools">
+      <button id="addRoom">Dodaj pokój (prostokąt)</button>
+      <button id="addWall">Dodaj ścianę (odcinek)</button>
+      <button id="clearPlan">Wyczyść plan</button>
+    </div>
+    <div class="canvasWrap">
+      <svg class="map" id="map" viewBox="0 0 1000 600" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <pattern id="bgPattern" patternUnits="userSpaceOnUse" width="1000" height="600">
+            <image id="bgImage" href="" x="0" y="0" width="1000" height="600" preserveAspectRatio="xMidYMid slice" />
+          </pattern>
+        </defs>
+        <rect id="bgRect" x="0" y="0" width="1000" height="600" fill="url(#bgPattern)"></rect>
+        <g id="rooms"></g>
+        <g id="walls" stroke="#333" stroke-width="4" stroke-linecap="round"></g>
+        <g id="dots"></g>
+      </svg>
+      <div id="mini" class="mini">
+        <div class="row"><b id="miniLabel">—</b></div>
+        <div class="row"><input type="range" id="miniBri" min="1" max="100"/><span id="miniBriVal" class="muted small"></span></div>
+        <div class="row"><input type="color" id="miniColor"/><button id="miniSetColor">Kolor</button></div>
+        <div class="row">
+          <input type="number" id="miniK" value="3000" min="2700" max="6500" step="50" style="width:110px"/><button id="miniSetK">CCT</button>
+        </div>
+        <div class="row">
+          <button id="miniOn">On</button><button id="miniOff">Off</button>
+        </div>
+        <div class="row"><button id="miniClose">Zamknij</button></div>
       </div>
     </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Stan i log</legend>
     <div class="row">
       <button id="refresh">Odśwież stan</button>
       <span id="devinfo" class="muted"></span>
@@ -41,7 +123,7 @@
   </fieldset>
 
   <fieldset>
-    <legend>Sterowanie</legend>
+    <legend>Sterowanie (panel)</legend>
     <div class="row">
       <button id="on">Włącz</button>
       <button id="off">Wyłącz</button>
@@ -63,67 +145,334 @@
   </fieldset>
 
 <script>
+// ===== auth (optional) =====
 const qs = (s)=>document.querySelector(s);
+const origFetch = window.fetch.bind(window);
+function currentToken(){ return localStorage.getItem("auth.token") || ""; }
+function setToken(t){ localStorage.setItem("auth.token", t||""); }
+window.fetch = (input, init={}) => {
+  const t = currentToken();
+  if (t) init.headers = Object.assign({}, init.headers, { "Authorization": "Bearer " + t });
+  return origFetch(input, init);
+};
+qs("#token").value = currentToken();
+qs("#saveToken").onclick = ()=>{ setToken(qs("#token").value.trim()); alert("Zapisano token."); };
+
+// ===== helpers / storage =====
 const api = (p, opt)=>fetch(p, opt).then(r=>r.json());
-const deviceObj = ()=>({ device: qs("#device").value.trim(), sku: qs("#sku").value.trim() });
 const show = (el, obj)=> el.textContent = JSON.stringify(obj, null, 2);
+const DEVKEY = "govee.devices";     // [{id,label,device,sku,meta:{room,x,y,z}}]
+const PLANKEY = "govee.plan";       // {bg, rooms:[{id,x,y,w,h,label}], walls:[{id,x1,y1,x2,y2}]}
+const uuid = ()=>Math.random().toString(36).slice(2)+Date.now().toString(36);
+
+function loadDevices(){ try { return JSON.parse(localStorage.getItem(DEVKEY) || "[]"); } catch { return []; } }
+function saveDevices(list){ localStorage.setItem(DEVKEY, JSON.stringify(list)); }
+function loadPlan(){ try { return JSON.parse(localStorage.getItem(PLANKEY) || '{"rooms":[],"walls":[]}' ); } catch{ return {rooms:[],walls:[]} } }
+function savePlan(plan){ localStorage.setItem(PLANKEY, JSON.stringify(plan)); }
+
+// ===== device form helpers =====
+function formToObj(){
+  const norm = v => { const n = parseFloat(v); return Number.isFinite(n) ? n : undefined; };
+  const [x,y] = (qs("#posxy").value||"").split(",").map(s=>norm(s.trim()));
+  return {
+    label: qs("#label").value.trim(),
+    device: qs("#device").value.trim(),
+    sku: qs("#sku").value.trim(),
+    meta: { room: qs("#room").value.trim() || undefined, x, y, z: norm(qs("#posz").value) }
+  };
+}
+function objToForm(o){
+  qs("#label").value = o.label || "";
+  qs("#device").value = o.device || "";
+  qs("#sku").value = o.sku || "";
+  qs("#room").value = o.meta?.room || "";
+  const xy = [o.meta?.x, o.meta?.y].every(n=>typeof n === "number") ? `${o.meta.x},${o.meta.y}` : "";
+  qs("#posxy").value = xy;
+  qs("#posz").value = typeof o.meta?.z === "number" ? o.meta.z : "";
+}
+function refreshSavedList(selectedId){
+  const list = loadDevices();
+  const sel = qs("#savedList");
+  sel.innerHTML = '<option value="">— wybierz zapisane urządzenie —</option>';
+  list.forEach(it=>{
+    const opt = document.createElement("option");
+    opt.value = it.id;
+    let label = it.label || it.sku || "Urządzenie";
+    if(it.meta?.room) label = `[${it.meta.room}] ` + label;
+    opt.textContent = `${label} (${it.device} | ${it.sku})`;
+    sel.appendChild(opt);
+  });
+  if (selectedId) sel.value = selectedId;
+  renderPlan();
+  return list;
+}
+function upsertCurrent(asLabel){
+  const form = formToObj();
+  if (asLabel) form.label = asLabel;
+  if (!form.device || !form.sku) { alert("Podaj device i sku"); return; }
+  const list = loadDevices();
+  const idx = list.findIndex(it=>it.device===form.device && it.sku===form.sku);
+  if (idx>=0){ list[idx] = { ...list[idx], ...form }; }
+  else { list.push({ id: uuid(), ...form }); }
+  saveDevices(list);
+  refreshSavedList();
+  alert("Zapisano.");
+}
+qs("#save").onclick = ()=> upsertCurrent();
+qs("#saveQuick").onclick = ()=> upsertCurrent("Żarówka - telewizor");
+qs("#delete").onclick = ()=>{
+  const list = loadDevices();
+  const selId = qs("#savedList").value;
+  if (!selId) { alert("Wybierz pozycję z listy"); return; }
+  const idx = list.findIndex(it=>it.id===selId);
+  if (idx>=0){ list.splice(idx,1); saveDevices(list); refreshSavedList(); alert("Usunięto."); }
+};
+qs("#savedList").onchange = (e)=>{
+  const list = loadDevices();
+  const it = list.find(x=>x.id===e.target.value);
+  if (it) objToForm(it);
+};
+qs("#select").onclick = ()=>{
+  const selId = qs("#savedList").value;
+  const list = loadDevices();
+  const it = list.find(x=>x.id===selId);
+  if (!it){ alert("Wybierz pozycję z listy"); return; }
+  objToForm(it);
+  alert("Załadowano wybraną żarówkę do formularza.");
+};
+
+// export/import devices
+qs("#export").onclick = ()=>{
+  const data = JSON.stringify(loadDevices(), null, 2);
+  const blob = new Blob([data], {type:"application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = "govee-devices.json"; a.click();
+  URL.revokeObjectURL(url);
+};
+qs("#importFile").onchange = (e)=>{
+  const file = e.target.files?.[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    try{
+      const arr = JSON.parse(String(reader.result||"[]"));
+      if (!Array.isArray(arr)) throw new Error("Błędny format");
+      saveDevices(arr); refreshSavedList(); alert("Zaimportowano.");
+    }catch(err){ alert("Błąd importu: "+err.message); }
+  };
+  reader.readAsText(file);
+};
+
+// ===== Plan builder =====
+const map = qs("#map"); const gRooms = document.getElementById("rooms"); const gWalls = document.getElementById("walls"); const gDots = document.getElementById("dots");
+const bgImage = document.getElementById("bgImage"); const bgPreview = document.getElementById("bgPreview");
+
+function renderPlan(){
+  const plan = loadPlan(); const devs = loadDevices();
+  // background
+  if (plan.bg){ bgImage.setAttribute("href", plan.bg); bgPreview.src = plan.bg; } else { bgImage.removeAttribute("href"); bgPreview.removeAttribute("src"); }
+  // rooms
+  gRooms.innerHTML = "";
+  (plan.rooms||[]).forEach(r=>{
+    const el = document.createElementNS("http://www.w3.org/2000/svg","rect");
+    el.setAttribute("x", r.x*1000); el.setAttribute("y", r.y*600); el.setAttribute("width", r.w*1000); el.setAttribute("height", r.h*600);
+    el.setAttribute("fill","#f0f7ff"); el.setAttribute("stroke","#bcd7ff"); el.setAttribute("stroke-width","2");
+    gRooms.appendChild(el);
+    // label
+    if (r.label){
+      const t = document.createElementNS("http://www.w3.org/2000/svg","text");
+      t.setAttribute("x", r.x*1000 + 6); t.setAttribute("y", r.y*600 + 16); t.setAttribute("font-size","12"); t.textContent = r.label;
+      t.setAttribute("fill","#444"); gRooms.appendChild(t);
+    }
+    // drag move
+    let dragging=false, sx=0, sy=0, start={x:r.x,y:r.y};
+    el.addEventListener("mousedown",(e)=>{ dragging=true; sx=e.clientX; sy=e.clientY; start={x:r.x,y:r.y}; e.preventDefault(); });
+    window.addEventListener("mousemove",(e)=>{
+      if(!dragging) return;
+      const dx=(e.clientX-sx)/map.getBoundingClientRect().width;
+      const dy=(e.clientY-sy)/map.getBoundingClientRect().height;
+      r.x = Math.max(0, Math.min(1-r.w, start.x+dx));
+      r.y = Math.max(0, Math.min(1-r.h, start.y+dy));
+      savePlan(plan); renderPlan();
+    });
+    window.addEventListener("mouseup",()=> dragging=false);
+  });
+  // walls
+  gWalls.innerHTML = "";
+  (plan.walls||[]).forEach(w=>{
+    const line = document.createElementNS("http://www.w3.org/2000/svg","line");
+    line.setAttribute("x1", w.x1*1000); line.setAttribute("y1", w.y1*600);
+    line.setAttribute("x2", w.x2*1000); line.setAttribute("y2", w.y2*600);
+    gWalls.appendChild(line);
+  });
+  // dots
+  gDots.innerHTML = "";
+  devs.forEach(d=>{
+    if (typeof d.meta?.x !== "number" || typeof d.meta?.y !== "number") return;
+    const cx = d.meta.x*1000, cy = d.meta.y*600;
+    const g = document.createElementNS("http://www.w3.org/2000/svg","g");
+    const c = document.createElementNS("http://www.w3.org/2000/svg","circle");
+    c.setAttribute("cx",cx); c.setAttribute("cy",cy); c.setAttribute("r",12); c.setAttribute("fill","#333"); c.setAttribute("opacity","0.9"); c.setAttribute("class","dot");
+    const t = document.createElementNS("http://www.w3.org/2000/svg","text");
+    t.setAttribute("x",cx+14); t.setAttribute("y",cy+4); t.setAttribute("font-size","12"); t.textContent = d.label || d.sku;
+    g.appendChild(c); g.appendChild(t);
+    // open mini control on click
+    g.addEventListener("click",(e)=> openMiniFor(d, e));
+    // drag dot
+    let dragging=false, sx=0, sy=0, start={x:d.meta.x,y:d.meta.y};
+    g.addEventListener("mousedown",(e)=>{ dragging=true; sx=e.clientX; sy=e.clientY; start={x:d.meta.x,y:d.meta.y}; e.preventDefault(); });
+    window.addEventListener("mousemove",(e)=>{
+      if(!dragging) return;
+      const rect=map.getBoundingClientRect();
+      const dx=(e.clientX-sx)/rect.width, dy=(e.clientY-sy)/rect.height;
+      d.meta.x = Math.max(0, Math.min(1, start.x+dx));
+      d.meta.y = Math.max(0, Math.min(1, start.y+dy));
+      const all = loadDevices(); const idx = all.findIndex(x=>x.id===d.id);
+      if (idx>=0){ all[idx].meta = Object.assign({}, all[idx].meta, { x:d.meta.x, y:d.meta.y }); saveDevices(all); }
+      renderPlan();
+    });
+    window.addEventListener("mouseup",()=> dragging=false);
+    gDots.appendChild(g);
+  });
+}
+
+qs("#bgFile").onchange = (e)=>{
+  const f = e.target.files?.[0]; if(!f) return;
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    const plan = loadPlan(); plan.bg = String(reader.result); savePlan(plan); renderPlan();
+  };
+  reader.readAsDataURL(f);
+};
+qs("#clearBg").onclick = ()=>{ const plan = loadPlan(); delete plan.bg; savePlan(plan); renderPlan(); };
+
+qs("#addRoom").onclick = ()=>{
+  const plan = loadPlan();
+  plan.rooms = plan.rooms || [];
+  plan.rooms.push({ id: uuid(), x: .1, y: .1, w: .3, h: .25, label: "Pokój" });
+  savePlan(plan); renderPlan();
+};
+qs("#addWall").onclick = ()=>{
+  const plan = loadPlan();
+  plan.walls = plan.walls || [];
+  plan.walls.push({ id: uuid(), x1: .2, y1: .2, x2: .6, y2: .2 });
+  savePlan(plan); renderPlan();
+};
+qs("#clearPlan").onclick = ()=>{ if (confirm("Wyczyścić plan (pokoje/ściany)?")) { savePlan({ rooms:[], walls:[], bg: loadPlan().bg }); renderPlan(); } };
+
+// click to place position for current form device if exists
+map.addEventListener("click",(e)=>{
+  const rect = map.getBoundingClientRect();
+  const x = (e.clientX - rect.left) / rect.width;
+  const y = (e.clientY - rect.top) / rect.height;
+  const form = formToObj();
+  const list = loadDevices();
+  const idx = list.findIndex(it=>it.device===form.device && it.sku===form.sku);
+  if (idx>=0){
+    list[idx].meta = Object.assign({}, list[idx].meta, { x, y });
+    saveDevices(list); refreshSavedList(list[idx].id);
+    qs("#posxy").value = `${x.toFixed(3)},${y.toFixed(3)}`;
+  }
+});
+
+// ===== mini control popup =====
+const mini = document.getElementById("mini");
+let miniDev = null;
+function openMiniFor(dev, event){
+  miniDev = dev;
+  document.getElementById("miniLabel").textContent = dev.label || dev.sku || "Urządzenie";
+  document.getElementById("miniBri").value = 50;
+  document.getElementById("miniBriVal").textContent = "50%";
+  const rect = map.getBoundingClientRect();
+  const x = event.clientX - rect.left, y = event.clientY - rect.top;
+  mini.style.left = (x + 10) + "px";
+  mini.style.top = (y + 10) + "px";
+  mini.style.display = "block";
+}
+document.getElementById("miniClose").onclick = ()=>{ mini.style.display="none"; miniDev=null; };
+document.getElementById("miniBri").oninput = (e)=>{ document.getElementById("miniBriVal").textContent = e.target.value + "%"; };
+document.getElementById("miniOn").onclick = async ()=>{
+  if (!miniDev) return;
+  const rsp = await api("/api/power",{method:"POST",headers:{'Content-Type':'application/json'}, body: JSON.stringify({ device: miniDev.device, sku: miniDev.sku, on:true })});
+  show(qs("#raw"), rsp);
+};
+document.getElementById("miniOff").onclick = async ()=>{
+  if (!miniDev) return;
+  const rsp = await api("/api/power",{method:"POST",headers:{'Content-Type':'application/json'}, body: JSON.stringify({ device: miniDev.device, sku: miniDev.sku, on:false })});
+  show(qs("#raw"), rsp);
+};
+document.getElementById("miniSetK").onclick = async ()=>{
+  if (!miniDev) return;
+  const k = Number(document.getElementById("miniK").value);
+  const rsp = await api("/api/colortemp",{method:"POST",headers:{'Content-Type':'application/json'}, body: JSON.stringify({ device: miniDev.device, sku: miniDev.sku, kelvin:k })});
+  show(qs("#raw"), rsp);
+};
+document.getElementById("miniSetColor").onclick = async ()=>{
+  if (!miniDev) return;
+  const hex = document.getElementById("miniColor").value.replace("#","");
+  const r = parseInt(hex.substring(0,2),16);
+  const g = parseInt(hex.substring(2,4),16);
+  const b = parseInt(hex.substring(4,6),16);
+  const rsp = await api("/api/color",{method:"POST",headers:{'Content-Type':'application/json'}, body: JSON.stringify({ device: miniDev.device, sku: miniDev.sku, r, g, b })});
+  show(qs("#raw"), rsp);
+};
+document.getElementById("miniBri").addEventListener("change", async (e)=>{
+  if (!miniDev) return;
+  const rsp = await api("/api/brightness",{method:"POST",headers:{'Content-Type':'application/json'}, body: JSON.stringify({ device: miniDev.device, sku: miniDev.sku, value: Number(e.target.value) })});
+  show(qs("#raw"), rsp);
+});
+
+// ===== state & panel controls =====
+function deviceObj(){ return { device: qs("#device").value.trim(), sku: qs("#sku").value.trim() }; }
 
 qs("#refresh").onclick = async ()=>{
   const {device, sku} = deviceObj();
   if(!device || !sku){ qs("#devinfo").textContent = "Podaj device i sku"; return; }
   const r = await api(`/api/state?device=${encodeURIComponent(device)}&sku=${encodeURIComponent(sku)}`);
-  const dev = r?.payload || null;
-  const caps = dev?.capabilities || [];
+  const dev = r?.payload || null; const caps = dev?.capabilities || [];
   const online = caps.find(c=>c.type==="devices.capabilities.online")?.state?.value;
   const power = caps.find(c=>c.type==="devices.capabilities.on_off")?.state?.value;
   const bri = caps.find(c=>c.instance==="brightness")?.state?.value;
   const rgb = caps.find(c=>c.instance==="colorRgb")?.state?.value;
   const cct = caps.find(c=>c.instance==="colorTemperatureK")?.state?.value;
-  qs("#devinfo").textContent = r?.code === 200
-    ? `online:${online} power:${power} bri:${bri} rgb:${rgb} cct:${cct}`
-    : `Błąd: ${r?.code} ${r?.msg || r?.message || ""}`;
+  qs("#devinfo").textContent = r?.code === 200 ? `online:${online} power:${power} bri:${bri} rgb:${rgb} cct:${cct}` : `Błąd: ${r?.code} ${r?.msg || r?.message || ""}`;
   show(qs("#raw"), r);
 };
-
 qs("#on").onclick = async ()=>{
-  const rsp = await api("/api/power",{method:"POST",headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({...deviceObj(), on:true})});
-  qs("#status").textContent = (rsp?.code === 200 ? "OK (variant " + (rsp?.variant||"?") + ")" : (rsp?.msg||rsp?.message||rsp?.code));
+  const rsp = await api("/api/power",{method:"POST",headers:{'Content-Type':'application/json'}, body: JSON.stringify({...deviceObj(), on:true})});
+  qs("#status").textContent = rsp?.code === 200 ? "OK" : (rsp?.msg||rsp?.message||rsp?.code);
   show(qs("#raw"), rsp);
 };
 qs("#off").onclick = async ()=>{
-  const rsp = await api("/api/power",{method:"POST",headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({...deviceObj(), on:false})});
-  qs("#status").textContent = (rsp?.code === 200 ? "OK (variant " + (rsp?.variant||"?") + ")" : (rsp?.msg||rsp?.message||rsp?.code));
+  const rsp = await api("/api/power",{method:"POST",headers:{'Content-Type':'application/json'}, body: JSON.stringify({...deviceObj(), on:false})});
+  qs("#status").textContent = rsp?.code === 200 ? "OK" : (rsp?.msg||rsp?.message||rsp?.code);
   show(qs("#raw"), rsp);
 };
-
 qs("#brightness").oninput = e => qs("#bval").textContent = e.target.value;
 qs("#setBrightness").onclick = async ()=>{
-  const rsp = await api("/api/brightness",{method:"POST",headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({...deviceObj(), value: qs("#brightness").value})});
-  alert(rsp?.code === 200 ? "OK (variant " + (rsp?.variant||"?") + ")" : (rsp?.msg||rsp?.message||rsp?.code));
-  show(qs("#raw"), rsp);
+  const rsp = await api("/api/brightness",{method:"POST",headers:{'Content-Type':'application/json'}, body: JSON.stringify({...deviceObj(), value: qs("#brightness").value})});
+  alert(rsp?.msg ?? rsp?.code ?? "OK"); show(qs("#raw"), rsp);
 };
-
 qs("#setColor").onclick = async ()=>{
   const hex = qs("#color").value.replace("#","");
-  const rR = parseInt(hex.substring(0,2),16);
-  const gG = parseInt(hex.substring(2,4),16);
-  const bB = parseInt(hex.substring(4,6),16);
-  const rsp = await api("/api/color",{method:"POST",headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({...deviceObj(), r: rR, g: gG, b: bB})});
-  alert(rsp?.code === 200 ? "OK (variant " + (rsp?.variant||"?") + ")" : (rsp?.msg||rsp?.message||rsp?.code));
-  show(qs("#raw"), rsp);
+  const r = parseInt(hex.substring(0,2),16);
+  const g = parseInt(hex.substring(2,4),16);
+  const b = parseInt(hex.substring(4,6),16);
+  const rsp = await api("/api/color",{method:"POST",headers:{'Content-Type':'application/json'}, body: JSON.stringify({...deviceObj(), r, g, b})});
+  alert(rsp?.msg ?? rsp?.code ?? "OK"); show(qs("#raw"), rsp);
 };
-
 qs("#setKelvin").onclick = async ()=>{
   const kelvin = Number(qs("#kelvin").value);
-  const rsp = await api("/api/colortemp",{method:"POST",headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({...deviceObj(), kelvin})});
-  alert(rsp?.code === 200 ? "OK (variant " + (rsp?.variant||"?") + ")" : (rsp?.msg||rsp?.message||rsp?.code));
-  show(qs("#raw"), rsp);
+  const rsp = await api("/api/colortemp",{method:"POST",headers:{'Content-Type':'application/json'}, body: JSON.stringify({...deviceObj(), kelvin})});
+  alert(rsp?.msg ?? rsp?.code ?? "OK"); show(qs("#raw"), rsp);
 };
+
+// init
+(function init(){
+  refreshSavedList();
+  renderPlan();
+})();
 </script>
 </body>
 </html>
