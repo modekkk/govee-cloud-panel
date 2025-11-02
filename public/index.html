@@ -20,19 +20,7 @@
 </style>
 <body>
   <h1>Govee – Panel (Cloud API)</h1>
-  <p class="muted">Jeżeli lista urządzeń jest pusta, możesz <b>wkleić ręcznie</b> <code>device</code> i <code>sku</code> (np. <code>H6004</code>).</p>
-
-  <fieldset>
-    <legend>Wybór urządzenia</legend>
-    <div class="row">
-      <button id="btnFetch">Pobierz z konta</button>
-      <button id="btnShowRaw">Pokaż RAW urządzeń</button>
-      <select id="deviceSelect">
-        <option value="">— wybierz z listy —</option>
-      </select>
-      <span id="count" class="muted"></span>
-    </div>
-  </fieldset>
+  <p class="muted">Stan (state) jest teraz pobierany metodą <b>POST</b> — zgodnie z odpowiedzią 405 z platformy.</p>
 
   <fieldset>
     <legend>Parametry urządzenia</legend>
@@ -91,47 +79,13 @@
 const qs = (s)=>document.querySelector(s);
 const api = (p, opt)=>fetch(p, opt).then(r=>r.json());
 const deviceObj = ()=>({ device: qs("#device").value.trim(), sku: qs("#sku").value.trim() });
-let DEVICES = [];
 const show = (el, obj)=> el.textContent = JSON.stringify(obj, null, 2);
-
-qs("#btnFetch").onclick = async () => {
-  const data = await api("/api/devices");
-  DEVICES = data?.data?.list || [];
-  qs("#count").textContent = `Znaleziono: ${DEVICES.length}`;
-  const sel = qs("#deviceSelect");
-  sel.innerHTML = '<option value="">— wybierz z listy —</option>';
-  DEVICES.forEach((d, i) => {
-    const name = d.deviceName || d.sku || "Urządzenie";
-    const opt = document.createElement("option");
-    opt.value = String(i);
-    opt.textContent = `${name} [${d.sku}] (${d.device})`;
-    sel.appendChild(opt);
-  });
-  qs("#devinfo").textContent = DEVICES.length ? "Wybierz urządzenie z listy." : "Brak urządzeń – możesz wkleić device i sku ręcznie.";
-};
-
-qs("#btnShowRaw").onclick = async ()=>{
-  const data = await api("/api/devices");
-  show(qs("#raw"), data);
-};
-
-qs("#deviceSelect").onchange = (e)=>{
-  const idx = Number(e.target.value);
-  if (!Number.isFinite(idx)) return;
-  const d = DEVICES[idx];
-  if (!d) return;
-  qs("#device").value = d.device;
-  qs("#sku").value = d.sku;
-  qs("#devinfo").textContent = `Wybrano: ${d.deviceName || d.sku} – ${d.device}`;
-};
 
 qs("#refresh").onclick = async ()=>{
   const {device, sku} = deviceObj();
-  if(!device || !sku){ qs("#devinfo").textContent = "Podaj device i sku (lub wybierz z listy)"; return; }
+  if(!device || !sku){ qs("#devinfo").textContent = "Podaj device i sku"; return; }
   const r = await api(`/api/state?device=${encodeURIComponent(device)}&sku=${encodeURIComponent(sku)}`);
-  const dev = Array.isArray(r?.data) ? r.data[0] : null;
-  const caps = dev?.capabilities || [];
-  qs("#devinfo").textContent = r?.code === 200 ? `${dev?.deviceName || dev?.sku || "Urządzenie"} – capabilities: ${caps.length}` : `Błąd: ${r?.code} ${r?.msg || r?.message || ""}`;
+  qs("#devinfo").textContent = r?.code === 200 ? "Stan pobrany" : `Błąd: ${r?.code || "?"} ${r?.msg || r?.message || ""}`;
   show(qs("#raw"), r);
 };
 

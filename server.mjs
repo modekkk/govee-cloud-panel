@@ -21,6 +21,7 @@ app.use((req, res, next) => {
 
 app.use(express.static("public"));
 
+// Devices
 app.get("/api/devices", async (_req, res) => {
   try {
     const r = await fetch(`${API}/user/devices`, { headers: H });
@@ -31,16 +32,18 @@ app.get("/api/devices", async (_req, res) => {
   }
 });
 
+// State: use POST (GET may return 405)
 app.get("/api/state", async (req, res) => {
   try {
     const { device, sku } = req.query;
     if (!device || !sku) return res.status(400).json({ error: "Missing device or sku" });
-    const url = new URL(`${API}/device/state`);
-    url.searchParams.set("device", device);
-    url.searchParams.set("sku", sku);
-    const r = await fetch(url, { headers: H });
+    const payload = {
+      requestId: Date.now().toString(),
+      payload: { device: { device, sku } }
+    };
+    const r = await fetch(`${API}/device/state`, { method: "POST", headers: H, body: JSON.stringify(payload) });
     const body = await r.json();
-    res.status(r.status).json({ url: url.toString(), ...body });
+    res.status(r.status).json(body);
   } catch (e) {
     res.status(502).json({ error: "Upstream error", details: String(e) });
   }
