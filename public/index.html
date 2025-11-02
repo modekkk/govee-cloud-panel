@@ -3,7 +3,7 @@
 <html lang="pl">
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Govee – Panel (Cloud API) v4.4</title>
+<title>Govee – Panel (Cloud API) v4.5</title>
 <style>
   body{font-family:system-ui,Segoe UI,Roboto,Arial;margin:24px;max-width:900px}
   .row{display:flex;gap:12px;align-items:center;margin:10px 0;flex-wrap:wrap}
@@ -15,10 +15,11 @@
   .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
   @media (max-width: 720px){ .grid{grid-template-columns:1fr} }
   pre{background:#f6f6f6;border:1px solid #e5e5e5;padding:10px;border-radius:8px;max-height:260px;overflow:auto}
+  input[type=text]{width:100%}
 </style>
 <body>
-  <h1>Govee – Panel (Cloud API) <small>v4.4</small></h1>
-  <p class="muted">Odczyt stanu: <b>r.payload.capabilities</b> (wariant B). Sterowanie: powerSwitch, brightness, colorRgb (int), colorTemperatureK.</p>
+  <h1>Govee – Panel (Cloud API) <small>v4.5</small></h1>
+  <p class="muted">Sterowanie wysyłane w <b>wariancie B</b> (flat: <code>payload: { device, sku, capability }</code>), z <b>fallbackiem A</b> (nested).</p>
 
   <fieldset>
     <legend>Parametry urządzenia</legend>
@@ -87,13 +88,13 @@ qs("#refresh").onclick = async ()=>{
 qs("#on").onclick = async ()=>{
   const rsp = await api("/api/power",{method:"POST",headers:{'Content-Type':'application/json'},
     body: JSON.stringify({...deviceObj(), on:true})});
-  qs("#status").textContent = rsp?.msg ?? rsp?.code ?? "OK";
+  qs("#status").textContent = (rsp?.code === 200 ? "OK (variant " + (rsp?.variant||"?") + ")" : (rsp?.msg||rsp?.message||rsp?.code));
   show(qs("#raw"), rsp);
 };
 qs("#off").onclick = async ()=>{
   const rsp = await api("/api/power",{method:"POST",headers:{'Content-Type':'application/json'},
     body: JSON.stringify({...deviceObj(), on:false})});
-  qs("#status").textContent = rsp?.msg ?? rsp?.code ?? "OK";
+  qs("#status").textContent = (rsp?.code === 200 ? "OK (variant " + (rsp?.variant||"?") + ")" : (rsp?.msg||rsp?.message||rsp?.code));
   show(qs("#raw"), rsp);
 };
 
@@ -101,7 +102,7 @@ qs("#brightness").oninput = e => qs("#bval").textContent = e.target.value;
 qs("#setBrightness").onclick = async ()=>{
   const rsp = await api("/api/brightness",{method:"POST",headers:{'Content-Type':'application/json'},
     body: JSON.stringify({...deviceObj(), value: qs("#brightness").value})});
-  alert(rsp?.msg ?? rsp?.code ?? "OK");
+  alert(rsp?.code === 200 ? "OK (variant " + (rsp?.variant||"?") + ")" : (rsp?.msg||rsp?.message||rsp?.code));
   show(qs("#raw"), rsp);
 };
 
@@ -112,7 +113,7 @@ qs("#setColor").onclick = async ()=>{
   const bB = parseInt(hex.substring(4,6),16);
   const rsp = await api("/api/color",{method:"POST",headers:{'Content-Type':'application/json'},
     body: JSON.stringify({...deviceObj(), r: rR, g: gG, b: bB})});
-  alert(rsp?.msg ?? rsp?.code ?? "OK");
+  alert(rsp?.code === 200 ? "OK (variant " + (rsp?.variant||"?") + ")" : (rsp?.msg||rsp?.message||rsp?.code));
   show(qs("#raw"), rsp);
 };
 
@@ -120,7 +121,7 @@ qs("#setKelvin").onclick = async ()=>{
   const kelvin = Number(qs("#kelvin").value);
   const rsp = await api("/api/colortemp",{method:"POST",headers:{'Content-Type':'application/json'},
     body: JSON.stringify({...deviceObj(), kelvin})});
-  alert(rsp?.msg ?? rsp?.code ?? "OK");
+  alert(rsp?.code === 200 ? "OK (variant " + (rsp?.variant||"?") + ")" : (rsp?.msg||rsp?.message||rsp?.code));
   show(qs("#raw"), rsp);
 };
 </script>
