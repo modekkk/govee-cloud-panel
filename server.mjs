@@ -14,7 +14,14 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Simple session auth (MemoryStore) — for single-instance demo
+// Public health check (must be BEFORE auth)
+const API = "https://openapi.api.govee.com/router/api/v1";
+const KEY = process.env.GOVEE_API_KEY;
+app.get("/healthz", (_req, res) => {
+  res.json({ ok: true, apiKeyPresent: !!KEY });
+});
+
+// Sessions (demo: MemoryStore)
 app.use(session({
   secret: process.env.SESSION_SECRET || "govee-demo-secret",
   resave: false,
@@ -22,7 +29,6 @@ app.use(session({
   cookie: { httpOnly: true, sameSite: "lax" }
 }));
 
-// CORS only for APIs if you expose cross-origin; otherwise not needed
 app.use(cors({ origin: process.env.CORS_ORIGIN || "*", credentials: true }));
 
 // --- Auth ---
@@ -50,14 +56,10 @@ app.post("/api/logout", (req, res)=>{
   req.session.destroy(()=> res.json({ ok: true }));
 });
 
-// --- Protected area ---
+// Protected area
 app.use(requireAuth);
 
-const API = "https://openapi.api.govee.com/router/api/v1";
-const KEY = process.env.GOVEE_API_KEY;
 const H = { "Content-Type": "application/json", "Govee-API-Key": KEY };
-
-app.get("/healthz", (_req, res) => res.json({ ok: true }));
 
 app.use((req, res, next) => {
   if (!KEY) return res.status(500).json({ error: "Missing GOVEE_API_KEY env var on server" });
@@ -155,4 +157,4 @@ app.get("*", (req, res, next) => {
 });
 
 const port = process.env.PORT || 3000;
-app.listen(port, () => console.log("Govee panel v4.9 running on port", port));
+app.listen(port, () => console.log("Govee panel v4.9.1 running on port", port));
