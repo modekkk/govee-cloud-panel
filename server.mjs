@@ -19,59 +19,52 @@ app.use((req, res, next) => {
   next();
 });
 
-// Helpers: safe JSON
-async function fetchJson(url, options) {
-  const r = await fetch(url, options);
-  const text = await r.text();
-  let body;
-  try {
-    body = text ? JSON.parse(text) : {};
-  } catch (e) {
-    body = { parseError: String(e), raw: text?.slice(0, 2000) || "" };
-  }
-  return { status: r.status, body, headers: Object.fromEntries(r.headers.entries()) };
-}
-
 app.use(express.static("public"));
 
 // Devices
 app.get("/api/devices", async (_req, res) => {
   try {
-    const { status, body, headers } = await fetchJson(`${API}/user/devices`, { headers: H });
-    res.status(status).json(body);
+    const r = await fetch(`${API}/user/devices`, { headers: H });
+    const body = await r.json();
+    res.status(r.status).json(body);
   } catch (e) {
     res.status(502).json({ error: "Upstream error", details: String(e) });
   }
 });
 
-// State: POST with two payload variants (fallback)
+// State: prefer Variant B (payload: { device, sku }), fallback to Variant A (payload: { device: { device, sku } })
 app.get("/api/state", async (req, res) => {
   try {
     const { device, sku } = req.query;
     if (!device || !sku) return res.status(400).json({ error: "Missing device or sku" });
 
-    // Variant A: device: { device, sku }
+    // Variant B (works for your account)
+    const payloadB = { requestId: Date.now().toString(), payload: { device, sku } };
+    let r = await fetch(`${API}/device/state`, { method: "POST", headers: H, body: JSON.stringify(payloadB) });
+    let body = await r.json().catch(()=>({}));
+    if (r.status === 200 && body?.code === 200) return res.status(200).json(body);
+
+    // Fallback Variant A
     const payloadA = { requestId: Date.now().toString(), payload: { device: { device, sku } } };
-    let { status, body } = await fetchJson(`${API}/device/state`, { method: "POST", headers: H, body: JSON.stringify(payloadA) });
-
-    if (status !== 200 || body?.code !== 200) {
-      // Variant B: flat payload with device + sku
-      const payloadB = { requestId: Date.now().toString(), payload: { device, sku } };
-      const second = await fetchJson(`${API}/device/state`, { method: "POST", headers: H, body: JSON.stringify(payloadB) });
-      // Return both attempts for debugging
-      return res.status(second.status).json({ attemptA: { status, body }, attemptB: { status: second.status, body: second.body } });
-    }
-
-    res.status(status).json(body);
+    const r2 = await fetch(`${API}/device/state`, { method: "POST", headers: H, body: JSON.stringify(payloadA) });
+    const body2 = await r2.json().catch(()=>({}));
+    return res.status(r2.status).json(body2);
   } catch (e) {
     res.status(502).json({ error: "Upstream error", details: String(e) });
   }
 });
 
 async function control(payload) {
-  return await fetchJson(`${API}/device/control`, { method: "POST", headers: H, body: JSON.stringify(payload) });
+  const r = await fetch(`${API}/device/control`, {
+    method: "POST",
+    headers: H,
+    body: JSON.stringify(payload),
+  });
+  const body = await r.json().catch(()=>({}));
+  return { status: r.status, body };
 }
 
+// Power: powerSwitch 1/0
 app.post("/api/power", async (req, res) => {
   const { device, sku, on } = req.body || {};
   if (!device || !sku || typeof on !== "boolean") return res.status(400).json({ error: "Missing device, sku or on(boolean)" });
@@ -86,6 +79,7 @@ app.post("/api/power", async (req, res) => {
   res.status(status).json(body);
 });
 
+// Brightness: 1..100
 app.post("/api/brightness", async (req, res) => {
   const { device, sku, value } = req.body || {};
   const v = Number(value);
@@ -101,6 +95,7 @@ app.post("/api/brightness", async (req, res) => {
   res.status(status).json(body);
 });
 
+// Color: colorRgb int 0..16777215
 app.post("/api/color", async (req, res) => {
   const { device, sku, r, g, b } = req.body || {};
   const rr = Number(r), gg = Number(g), bb = Number(b);
@@ -117,6 +112,7 @@ app.post("/api/color", async (req, res) => {
   res.status(status).json(body);
 });
 
+// Color temperature: colorTemperatureK
 app.post("/api/colortemp", async (req, res) => {
   const { device, sku, kelvin } = req.body || {};
   const k = Number(kelvin);
@@ -132,18 +128,10 @@ app.post("/api/colortemp", async (req, res) => {
   res.status(status).json(body);
 });
 
-// Debug: raw upstream check (GET)
-app.get("/api/debug/upstream-state-get", async (req, res) => {
-  const { device, sku } = req.query;
-  const url = `${API}/device/state?device=${encodeURIComponent(device||"")}&sku=${encodeURIComponent(sku||"")}`;
-  const { status, body, headers } = await fetchJson(url, { headers: H });
-  res.status(200).json({ status, headers, body, url });
-});
-
 app.get("*", (req, res, next) => {
   if (req.path.startsWith("/api/")) return next();
   res.sendFile(process.cwd() + "/public/index.html");
 });
 
 const port = process.env.PORT || 3000;
-app.listen(port, () => console.log("Govee panel running on port", port));
+app.listen(port, () => console.log("Govee panel v4.4 running on port", port));
