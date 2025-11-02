@@ -19,7 +19,7 @@
 </style>
 <body>
   <h1>Govee – Panel (Cloud API)</h1>
-  <p class="muted">Najpierw pobierz listę i wybierz urządzenie.</p>
+  <p class="muted">Pobierz listę i wybierz urządzenie. Ten panel obsługuje <b>powerSwitch</b>, <b>brightness</b>, <b>colorRgb</b> i <b>colorTemperatureK</b>.</p>
 
   <fieldset>
     <legend>Wybór urządzenia</legend>
@@ -63,7 +63,7 @@
   <fieldset>
     <legend>Jasność</legend>
     <div class="row">
-      <input type="range" id="brightness" min="0" max="100" value="50"/>
+      <input type="range" id="brightness" min="1" max="100" value="50"/>
       <span id="bval">50</span>%
       <button id="setBrightness">Ustaw</button>
     </div>
@@ -80,7 +80,7 @@
   <fieldset>
     <legend>Temperatura barwowa (K)</legend>
     <div class="row">
-      <input type="number" id="kelvin" value="3000" step="50"/>
+      <input type="number" id="kelvin" value="3000" step="50" min="2700" max="6500"/>
       <button id="setKelvin">Ustaw CCT</button>
     </div>
   </fieldset>
@@ -110,7 +110,6 @@ qs("#btnFetch").onclick = async () => {
   } else {
     qs("#devinfo").textContent = "Wybierz urządzenie z listy.";
   }
-  show(qs("#raw"), data);
 };
 
 qs("#deviceSelect").onchange = (e)=>{
@@ -127,9 +126,10 @@ qs("#refresh").onclick = async ()=>{
   const {device, sku} = deviceObj();
   if(!device || !sku){ qs("#devinfo").textContent = "Wybierz urządzenie z listy"; return; }
   const r = await api(`/api/state?device=${encodeURIComponent(device)}&sku=${encodeURIComponent(sku)}`);
-  const caps = r?.data?.capabilities || [];
-  const online = caps.find(c=>c.type==="devices.capabilities.online")?.state;
-  qs("#devinfo").textContent = r?.code === 200 ? `online: ${online ?? "?"}, capabilities: ${caps.length}` : `Błąd: ${r?.code} ${r?.msg || r?.message || ""}`;
+  const dev = Array.isArray(r?.data) ? r.data[0] : null;
+  const caps = dev?.capabilities || [];
+  const online = caps.find(c=>c.type==="devices.capabilities.on_off" && c.instance==="powerSwitch") ? "?" : "?";
+  qs("#devinfo").textContent = r?.code === 200 ? `${dev?.deviceName || dev?.sku || "Urządzenie"} – capabilities: ${caps.length}` : `Błąd: ${r?.code} ${r?.msg || r?.message || ""}`;
   show(qs("#raw"), r);
 };
 
